@@ -3,12 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import engine, Base
 
+# Importar todos os models para o Base.metadata criá-los
+from app.models import user_model            # noqa: F401
+from app.models import email_model           # noqa: F401
+from app.models import email_analysis_model  # noqa: F401
 
-from app.models import user_model           
-from app.models import email_model          
-from app.models import email_analysis_model  
-
-from app.routers import auth_router, email_router
+from app.routers import auth_router, email_router, ai_router
 
 app = FastAPI(title="Email Assistant API")
 
@@ -26,6 +26,7 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(email_router.router)
+app.include_router(ai_router.router)
 
 
 @app.get("/")
