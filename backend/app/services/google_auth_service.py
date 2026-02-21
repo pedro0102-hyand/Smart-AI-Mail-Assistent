@@ -1,7 +1,12 @@
 from google_auth_oauthlib.flow import Flow
 from app.core.config import *
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "openid",
+]
 
 def get_google_auth_flow():
     return Flow.from_client_config(
