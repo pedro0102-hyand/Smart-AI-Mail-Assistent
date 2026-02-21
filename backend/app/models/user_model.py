@@ -18,4 +18,4 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relacionamento
-    emails = relationship("Email", back_populates="user")
+    emails = relationship("Email", back_populates="user") # conecta o usuário ao e-mail
