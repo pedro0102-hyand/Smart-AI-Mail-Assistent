@@ -13,9 +13,9 @@ security = HTTPBearer()
 
 def create_access_token(data: dict) -> str:
     """Gera um JWT com os dados do usuário."""
-    to_encode = data.copy()
+    to_encode = data.copy() # nao altera dicionario original
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire}) # cria o token e envia ao payload do JWT
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -28,6 +28,9 @@ def decode_access_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Token inválido ou expirado.")
 
 
+# lendo o header authorization
+# extraindo token
+# injetando nas credenciasi
 def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Security(security),
 ) -> int:
@@ -35,7 +38,7 @@ def get_current_user_id(
     Dependency do FastAPI — extrai o user_id do JWT no header Authorization.
     Uso nas rotas: user_id: int = Depends(get_current_user_id)
     """
-    payload = decode_access_token(credentials.credentials)
+    payload = decode_access_token(credentials.credentials) # valida o token
     user_id: int = payload.get("sub")
     if user_id is None:
         raise HTTPException(status_code=401, detail="Token sem identificação de usuário.")
