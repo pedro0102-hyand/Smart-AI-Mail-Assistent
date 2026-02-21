@@ -1,5 +1,5 @@
 import base64
-import email as email_lib
+from email.mime.text import MIMEText
 from datetime import datetime
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
@@ -7,7 +7,6 @@ from app.core.config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 
 
 def _build_gmail_service(access_token: str, refresh_token: str):
-    """Constrói o cliente autenticado da Gmail API."""
     credentials = Credentials(
         token=access_token,
         refresh_token=refresh_token,
@@ -19,9 +18,7 @@ def _build_gmail_service(access_token: str, refresh_token: str):
 
 
 def _decode_body(payload: dict) -> str:
-    """Extrai e decodifica o corpo do e-mail (texto simples ou HTML)."""
     body = ""
-
     if "parts" in payload:
         for part in payload["parts"]:
             mime_type = part.get("mimeType", "")
@@ -30,29 +27,22 @@ def _decode_body(payload: dict) -> str:
                 body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
                 break
             elif mime_type == "text/html" and data:
-                # fallback para HTML se não tiver texto simples
                 body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
     else:
         data = payload.get("body", {}).get("data", "")
         if data:
             body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
-
     return body
 
 
 def _parse_headers(headers: list) -> dict:
-    """Transforma a lista de headers em um dicionário."""
     return {h["name"].lower(): h["value"] for h in headers}
 
 
 def fetch_emails(access_token: str, refresh_token: str, max_results: int = 20) -> list[dict]:
-    """
-    Busca os últimos e-mails do usuário no Gmail.
-    Retorna uma lista de dicionários com os dados de cada e-mail.
-    """
+    """Busca os últimos e-mails do usuário no Gmail."""
     service = _build_gmail_service(access_token, refresh_token)
 
-    # 1. Lista os IDs dos e-mails
     result = service.users().messages().list(
         userId="me",
         maxResults=max_results,
@@ -62,7 +52,6 @@ def fetch_emails(access_token: str, refresh_token: str, max_results: int = 20) -
     messages = result.get("messages", [])
     emails = []
 
-    # 2. Para cada ID, busca os detalhes completos
     for msg in messages:
         msg_data = service.users().messages().get(
             userId="me",
@@ -72,8 +61,6 @@ def fetch_emails(access_token: str, refresh_token: str, max_results: int = 20) -
 
         payload = msg_data.get("payload", {})
         headers = _parse_headers(payload.get("headers", []))
-
-        # Converte o timestamp do Gmail (milissegundos) para datetime
         internal_date = msg_data.get("internalDate")
         date = datetime.fromtimestamp(int(internal_date) / 1000) if internal_date else None
 
@@ -90,3 +77,30 @@ def fetch_emails(access_token: str, refresh_token: str, max_results: int = 20) -
         })
 
     return emails
+
+
+def send_email(
+    access_token: str,
+    refresh_token: str,
+    to: str,
+    subject: str,
+    body: str,
+    thread_id: str = None,
+) -> None:
+    """Envia um e-mail via Gmail API."""
+    service = _build_gmail_service(access_token, refresh_token)
+
+    mime_message = MIMEText(body, "plain", "utf-8")
+    mime_message["to"] = to
+    mime_message["subject"] = subject
+
+    raw = base64.urlsafe_b64encode(mime_message.as_bytes()).decode("utf-8")
+
+    message_body = {"raw": raw}
+    if thread_id:
+        message_body["threadId"] = thread_id
+
+    service.users().messages().send(
+        userId="me",
+        body=message_body,
+    ).execute()
