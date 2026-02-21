@@ -1,0 +1,18 @@
+# ambiente virtual
+venv/
+
+# variáveis sensíveis
+.env
+
+# cache
+__pycache__/
+*.pyc
+
+# banco local
+*.db
+
+# arquivos do sistema
+.DS_Store
+
+# logs
+*.log
