@@ -72,7 +72,7 @@ def auth_callback(code: str, db: Session = Depends(get_db)):
 
     # 5. Redirecionar pro front com o token na URL
     # (o front salva no localStorage e usa nas próximas requisições)
-    frontend_url = f"http://localhost:3000/auth/success?token={jwt_token}"
+    frontend_url = f"http://localhost:5173/auth/success?token={jwt_token}"
     return RedirectResponse(frontend_url)
 
 
