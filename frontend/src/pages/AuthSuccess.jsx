@@ -1,18 +1,22 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function AuthSuccess() {
   const navigate = useNavigate();
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
 
     if (token) {
       localStorage.setItem("token", token);
-      navigate("/inbox");
+      navigate("/inbox", { replace: true });
     } else {
-      navigate("/");
+      navigate("/", { replace: true });
     }
   }, [navigate]);
 

@@ -15,18 +15,21 @@ app = FastAPI(title="Email Assistant API")
 Base.metadata.create_all(bind=engine)
 
 # CORS — permite o front em localhost:3000 se comunicar com o back
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.include_router(auth_router.router)
 app.include_router(email_router.router)
 app.include_router(ai_router.router)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
