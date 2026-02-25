@@ -1,14 +1,20 @@
 from google_auth_oauthlib.flow import Flow
-from app.core.config import *
+from app.core.config import (
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI,
+)
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",       # necessário para enviar e-mails
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
     "openid",
 ]
 
-def get_google_auth_flow():
+
+def get_google_auth_flow() -> Flow:
     return Flow.from_client_config(
         {
             "web": {

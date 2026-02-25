@@ -5,7 +5,7 @@ import requests
 
 from app.services.google_auth_service import get_google_auth_flow
 from app.core.database import get_db
-from app.core.security import create_access_token
+from app.core.security import create_access_token, get_current_user_id
 from app.models.user_model import User
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -48,7 +48,6 @@ def auth_callback(code: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.google_id == google_id).first()
 
     if user:
-        # Atualiza tokens (podem ter sido renovados)
         user.access_token = credentials.token
         user.refresh_token = credentials.refresh_token or user.refresh_token
         user.name = name
@@ -71,13 +70,24 @@ def auth_callback(code: str, db: Session = Depends(get_db)):
     jwt_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
     # 5. Redirecionar pro front com o token na URL
-    # (o front salva no localStorage e usa nas próximas requisições)
     frontend_url = f"http://localhost:5173/auth/success?token={jwt_token}"
     return RedirectResponse(frontend_url)
 
 
 @router.get("/me")
-def get_me(db: Session = Depends(get_db), user_id: int = Depends(lambda: None)):
-    """Rota de exemplo protegida — retorna dados do usuário logado."""
-    # Implementado completamente na Fase 3 com Depends(get_current_user_id)
-    pass
+def get_me(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """Retorna os dados do usuário autenticado."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "picture": user.picture,
+        "created_at": user.created_at,
+    }
