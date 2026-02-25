@@ -18,21 +18,37 @@ def _build_gmail_service(access_token: str, refresh_token: str):
 
 
 def _decode_body(payload: dict) -> str:
-    body = ""
-    if "parts" in payload:
-        for part in payload["parts"]:
+    """Extrai o corpo do e-mail priorizando HTML sobre texto plano.
+    Trata também e-mails com partes aninhadas (multipart/alternative dentro de multipart/mixed).
+    """
+    html_body = ""
+    plain_body = ""
+
+    def extract_parts(parts):
+        nonlocal html_body, plain_body
+        for part in parts:
             mime_type = part.get("mimeType", "")
-            data = part.get("body", {}).get("data", "")
-            if mime_type == "text/plain" and data:
-                body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
-                break
-            elif mime_type == "text/html" and data:
-                body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+            # Recursão para partes aninhadas (ex: multipart/alternative)
+            if mime_type.startswith("multipart/") and "parts" in part:
+                extract_parts(part["parts"])
+            else:
+                data = part.get("body", {}).get("data", "")
+                if data:
+                    decoded = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                    if mime_type == "text/html":
+                        html_body = decoded
+                    elif mime_type == "text/plain" and not html_body:
+                        plain_body = decoded
+
+    if "parts" in payload:
+        extract_parts(payload["parts"])
     else:
         data = payload.get("body", {}).get("data", "")
         if data:
-            body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
-    return body
+            plain_body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+
+    # Prioriza HTML; cai para texto plano se não houver HTML
+    return html_body or plain_body
 
 
 def _parse_headers(headers: list) -> dict:
