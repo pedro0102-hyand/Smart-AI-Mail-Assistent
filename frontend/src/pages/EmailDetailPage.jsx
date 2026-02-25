@@ -27,6 +27,10 @@ function formatDateFull(dateStr) {
   });
 }
 
+function isHtml(str) {
+  return /<[a-z][\s\S]*>/i.test(str);
+}
+
 export default function EmailDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -108,6 +112,7 @@ export default function EmailDetailPage() {
   const catStyle = cat ? (CATEGORY_COLORS[cat] || CATEGORY_COLORS.outro) : null;
   const urgency = email.analysis?.urgency;
   const urgConfig = urgency ? (URGENCY_CONFIG[urgency] || null) : null;
+  const bodyIsHtml = email.body ? isHtml(email.body) : false;
 
   return (
     <div style={styles.layout}>
@@ -186,14 +191,22 @@ export default function EmailDetailPage() {
         {/* Email body */}
         <div style={styles.bodyCard}>
           <div style={styles.bodyLabel}>Conteúdo do e-mail</div>
-          <div style={styles.bodyText}>
-            {email.body
-              ? email.body.split("\n").map((line, i) => (
+          {email.body ? (
+            bodyIsHtml ? (
+              <div
+                style={styles.bodyHtml}
+                dangerouslySetInnerHTML={{ __html: email.body }}
+              />
+            ) : (
+              <div style={styles.bodyText}>
+                {email.body.split("\n").map((line, i) => (
                   <React.Fragment key={i}>{line}<br /></React.Fragment>
-                ))
-              : <span style={{ color: "#9CA3AF" }}>(sem conteúdo)</span>
-            }
-          </div>
+                ))}
+              </div>
+            )
+          ) : (
+            <span style={{ color: "#9CA3AF", fontSize: "14px" }}>(sem conteúdo)</span>
+          )}
         </div>
 
         {/* Reply section */}
@@ -294,6 +307,7 @@ const styles = {
   bodyCard: { background: "white", borderRadius: "16px", padding: "28px", marginBottom: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" },
   bodyLabel: { fontSize: "11px", fontWeight: "700", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px" },
   bodyText: { fontSize: "14px", color: "#374151", lineHeight: "1.8", whiteSpace: "pre-wrap", wordBreak: "break-word" },
+  bodyHtml: { fontSize: "14px", color: "#374151", lineHeight: "1.8", wordBreak: "break-word" },
 
   replyCard: { background: "white", borderRadius: "16px", padding: "28px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" },
   replyHeader: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" },
