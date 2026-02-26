@@ -1,9 +1,27 @@
+# API
 fastapi
 uvicorn[standard]
+
+# Variáveis de ambiente
 python-dotenv
+
+# Autenticação Google OAuth2
+google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
+
+# Banco de dados
 sqlalchemy
+
+# JWT
 python-jose[cryptography]
+
+# Requisições HTTP
 requests
+
+# IA — Gemini
+google-generativeai
+
+# Tratamento de erros da API Google
+google-api-core
