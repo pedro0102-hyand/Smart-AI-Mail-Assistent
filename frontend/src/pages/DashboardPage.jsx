@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar, { MobileHeader } from "../components/Sidebar";
 import { api } from "../api";
 import { useTheme } from "../App";
 
@@ -25,16 +25,35 @@ const URGENCY_LABELS = {
   baixa: "Baixa urgência",
 };
 
-function DonutChart({ data, dark }) {
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 640);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
+
+function useIsTablet() {
+  const [isTablet, setIsTablet] = useState(window.innerWidth <= 900);
+  useEffect(() => {
+    const handler = () => setIsTablet(window.innerWidth <= 900);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isTablet;
+}
+
+function DonutChart({ data, dark, size = 160 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) return null;
 
   let cumulative = 0;
-  const size = 160;
   const cx = size / 2;
   const cy = size / 2;
-  const r = 60;
-  const innerR = 36;
+  const r = size * 0.375;
+  const innerR = size * 0.225;
 
   const slices = data.map((d) => {
     const pct = d.value / total;
@@ -64,14 +83,14 @@ function DonutChart({ data, dark }) {
   });
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
       {slices.map((s, i) => (
         <path key={i} d={s.path} fill={s.color} stroke={dark ? "#16161F" : "white"} strokeWidth="2" />
       ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="20" fontWeight="800" fill={dark ? "#E5E7EB" : "#1A1A2E"} fontFamily="Georgia, serif">
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={size * 0.125} fontWeight="800" fill={dark ? "#E5E7EB" : "#1A1A2E"} fontFamily="Georgia, serif">
         {total}
       </text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize="9" fill="#9CA3AF" fontFamily="system-ui">
+      <text x={cx} y={cy + size * 0.075} textAnchor="middle" fontSize={size * 0.056} fill="#9CA3AF" fontFamily="system-ui">
         analisados
       </text>
     </svg>
@@ -80,6 +99,9 @@ function DonutChart({ data, dark }) {
 
 export default function DashboardPage() {
   const { dark } = useTheme();
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -118,168 +140,192 @@ export default function DashboardPage() {
   const c = dark ? darkColors : lightColors;
 
   const kpis = [
-    { label: "Total de e-mails", value: stats?.total_emails ?? "—", icon: "📧", bg: dark ? "#1E1E2E" : "#EEF2FF" },
-    { label: "Não lidos",         value: stats?.unread ?? "—",         icon: "🔴", bg: dark ? "#2A1515" : "#FEF2F2" },
-    { label: "Analisados pela IA", value: analyzed,                    icon: "✦",  bg: dark ? "#0D2A1E" : "#ECFDF5" },
-    { label: "Cobertura IA",       value: `${coveragePercent}%`,       icon: "📊", bg: dark ? "#2A1F0D" : "#FFFBEB" },
+    { label: "Total de e-mails",   value: stats?.total_emails ?? "—", icon: "📧", bg: dark ? "#1E1E2E" : "#EEF2FF" },
+    { label: "Não lidos",           value: stats?.unread ?? "—",       icon: "🔴", bg: dark ? "#2A1515" : "#FEF2F2" },
+    { label: "Analisados pela IA",  value: analyzed,                   icon: "✦",  bg: dark ? "#0D2A1E" : "#ECFDF5" },
+    { label: "Cobertura IA",        value: `${coveragePercent}%`,      icon: "📊", bg: dark ? "#2A1F0D" : "#FFFBEB" },
   ];
+
+  const padding = isMobile ? "16px" : "36px 40px";
+  const titleSize = isMobile ? "20px" : "24px";
+  const kpiCols = isMobile ? "repeat(2, 1fr)" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)";
+  const chartCols = isTablet ? "1fr" : "1fr 1fr";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: dark ? "#0F0F14" : "#F8F7F4", fontFamily: "system-ui, sans-serif", transition: "background 0.3s" }}>
-      <Sidebar />
-      <main style={{ flex: 1, padding: "36px 40px" }}>
+      {!isMobile && <Sidebar />}
+      {isMobile && (
+        <Sidebar mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      )}
 
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px" }}>
-          <div>
-            <h1 style={{ fontSize: "24px", fontWeight: "700", color: c.title, margin: 0, fontFamily: "Georgia, serif" }}>Dashboard</h1>
-            <p style={{ fontSize: "13px", color: "#9CA3AF", margin: "4px 0 0" }}>Visão geral da sua caixa de entrada</p>
-          </div>
-          <button
-            onClick={loadStats}
-            disabled={loading}
-            style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 16px", border: `1.5px solid ${c.border}`, borderRadius: "10px", background: c.card, fontSize: "13px", fontWeight: "500", color: c.text, cursor: "pointer" }}
-          >
-            ↻ Atualizar
-          </button>
-        </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {isMobile && <MobileHeader onOpen={() => setSidebarOpen(true)} dark={dark} />}
 
-        {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "300px", gap: "14px" }}>
-            <div style={{ width: "32px", height: "32px", border: "3px solid #E5E7EB", borderTop: "3px solid #6366F1", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            <span style={{ fontSize: "14px", color: "#9CA3AF" }}>Carregando estatísticas...</span>
-          </div>
-        ) : error ? (
-          <div style={{ padding: "16px", background: "#FEE2E2", color: "#DC2626", borderRadius: "10px", fontSize: "14px" }}>{error}</div>
-        ) : (
-          <>
-            {/* KPI Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-              {kpis.map((kpi, i) => (
-                <div key={i} style={{ background: c.card, borderRadius: "16px", padding: "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
-                  <div style={{ width: "40px", height: "40px", background: kpi.bg, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", marginBottom: "16px" }}>
-                    {kpi.icon}
-                  </div>
-                  <div style={{ fontSize: "28px", fontWeight: "800", color: c.title, marginBottom: "4px", fontFamily: "Georgia, serif" }}>{kpi.value}</div>
-                  <div style={{ fontSize: "12px", color: "#9CA3AF", fontWeight: "500" }}>{kpi.label}</div>
-                </div>
-              ))}
+        <main style={{ flex: 1, padding }}>
+          {/* Header */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: isMobile ? "flex-start" : "flex-start",
+            flexDirection: isMobile ? "column" : "row",
+            marginBottom: "28px",
+            gap: "12px",
+          }}>
+            <div>
+              <h1 style={{ fontSize: titleSize, fontWeight: "700", color: c.title, margin: 0, fontFamily: "Georgia, serif" }}>Dashboard</h1>
+              <p style={{ fontSize: "13px", color: "#9CA3AF", margin: "4px 0 0" }}>Visão geral da sua caixa de entrada</p>
             </div>
+            <button
+              onClick={loadStats}
+              disabled={loading}
+              style={{
+                display: "flex", alignItems: "center", gap: "7px",
+                padding: "9px 16px", border: `1.5px solid ${c.border}`, borderRadius: "10px",
+                background: c.card, fontSize: "13px", fontWeight: "500", color: c.text, cursor: "pointer",
+                alignSelf: isMobile ? "flex-start" : "auto",
+              }}
+            >
+              ↻ Atualizar
+            </button>
+          </div>
 
-            {/* Charts */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-
-              {/* Barras — Categorias */}
-              <div style={{ background: c.card, borderRadius: "16px", padding: "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
-                <div style={{ marginBottom: "20px" }}>
-                  <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>E-mails por Categoria</div>
-                  <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>{categoryData.length} categorias detectadas</div>
-                </div>
-                {categoryData.length === 0 ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "160px", color: "#9CA3AF", fontSize: "13px", textAlign: "center", lineHeight: "1.6" }}>
-                    Nenhum e-mail analisado ainda.<br />Use "Analisar com IA" na caixa de entrada.
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "300px", gap: "14px" }}>
+              <div style={{ width: "32px", height: "32px", border: "3px solid #E5E7EB", borderTop: "3px solid #6366F1", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              <span style={{ fontSize: "14px", color: "#9CA3AF" }}>Carregando estatísticas...</span>
+            </div>
+          ) : error ? (
+            <div style={{ padding: "16px", background: "#FEE2E2", color: "#DC2626", borderRadius: "10px", fontSize: "14px" }}>{error}</div>
+          ) : (
+            <>
+              {/* KPI Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: isMobile ? "10px" : "16px", marginBottom: "16px" }}>
+                {kpis.map((kpi, i) => (
+                  <div key={i} style={{
+                    background: c.card, borderRadius: "16px",
+                    padding: isMobile ? "16px" : "24px",
+                    boxShadow: c.shadow, border: `1px solid ${c.borderCard}`,
+                  }}>
+                    <div style={{ width: "36px", height: "36px", background: kpi.bg, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", marginBottom: "12px" }}>
+                      {kpi.icon}
+                    </div>
+                    <div style={{ fontSize: isMobile ? "22px" : "28px", fontWeight: "800", color: c.title, marginBottom: "4px", fontFamily: "Georgia, serif" }}>
+                      {kpi.value}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: "500", lineHeight: "1.3" }}>{kpi.label}</div>
                   </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                    {categoryData.map((item) => {
-                      const pct = Math.round((item.value / maxCatValue) * 100);
-                      return (
-                        <div key={item.name}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                            <span style={{ fontSize: "13px", color: c.text, fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: item.color, display: "inline-block", flexShrink: 0 }} />
-                              {item.name}
-                            </span>
-                            <span style={{ fontSize: "13px", fontWeight: "700", color: c.title }}>{item.value}</span>
-                          </div>
-                          <div style={{ height: "8px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "4px", overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${pct}%`, background: item.color, borderRadius: "4px", transition: "width 0.6s ease" }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                ))}
               </div>
 
-              {/* Donut — Urgência */}
-              <div style={{ background: c.card, borderRadius: "16px", padding: "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
-                <div style={{ marginBottom: "20px" }}>
-                  <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>Distribuição por Urgência</div>
-                  <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>{analyzed} analisados</div>
-                </div>
-                {urgencyData.length === 0 ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "160px", color: "#9CA3AF", fontSize: "13px" }}>
-                    Nenhum e-mail analisado ainda.
+              {/* Charts */}
+              <div style={{ display: "grid", gridTemplateColumns: chartCols, gap: "16px", marginBottom: "16px" }}>
+                {/* Bar chart — Categories */}
+                <div style={{ background: c.card, borderRadius: "16px", padding: isMobile ? "18px" : "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
+                  <div style={{ marginBottom: "20px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>E-mails por Categoria</div>
+                    <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>{categoryData.length} categorias detectadas</div>
                   </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-                    <DonutChart data={urgencyData} dark={dark} />
-                    <div style={{ display: "flex", flexDirection: "column", gap: "14px", flex: 1 }}>
-                      {urgencyData.map((item) => {
-                        const pct = analyzed > 0 ? Math.round((item.value / analyzed) * 100) : 0;
+                  {categoryData.length === 0 ? (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "120px", color: "#9CA3AF", fontSize: "13px", textAlign: "center", lineHeight: "1.6" }}>
+                      Nenhum e-mail analisado ainda.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                      {categoryData.map((item) => {
+                        const pct = Math.round((item.value / maxCatValue) * 100);
                         return (
                           <div key={item.name}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                              <span style={{ fontSize: "12px", color: c.text, display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: item.color, display: "inline-block" }} />
-                                {URGENCY_LABELS[item.name] || item.name}
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                              <span style={{ fontSize: "13px", color: c.text, fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: item.color, display: "inline-block", flexShrink: 0 }} />
+                                {item.name}
                               </span>
-                              <span style={{ fontSize: "12px", fontWeight: "700", color: item.color }}>{pct}%</span>
+                              <span style={{ fontSize: "13px", fontWeight: "700", color: c.title }}>{item.value}</span>
                             </div>
-                            <div style={{ height: "4px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "2px", overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${pct}%`, background: item.color, borderRadius: "2px", transition: "width 0.6s ease" }} />
+                            <div style={{ height: "8px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "4px", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${pct}%`, background: item.color, borderRadius: "4px", transition: "width 0.6s ease" }} />
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
+                </div>
 
-            {/* Cobertura IA */}
-            {stats?.total_emails > 0 && (
-              <div style={{ background: c.card, borderRadius: "16px", padding: "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-                  <div>
-                    <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>Cobertura da análise IA</div>
-                    <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>{analyzed} de {stats.total_emails} e-mails analisados</div>
+                {/* Donut — Urgency */}
+                <div style={{ background: c.card, borderRadius: "16px", padding: isMobile ? "18px" : "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
+                  <div style={{ marginBottom: "20px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>Distribuição por Urgência</div>
+                    <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>{analyzed} analisados</div>
                   </div>
-                  <div style={{ fontSize: "28px", fontWeight: "800", color: "#6366F1", fontFamily: "Georgia, serif" }}>{coveragePercent}%</div>
+                  {urgencyData.length === 0 ? (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "120px", color: "#9CA3AF", fontSize: "13px" }}>
+                      Nenhum e-mail analisado ainda.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "16px" : "24px", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+                      <DonutChart data={urgencyData} dark={dark} size={isMobile ? 120 : 160} />
+                      <div style={{ display: "flex", flexDirection: "column", gap: "14px", flex: 1, minWidth: 0 }}>
+                        {urgencyData.map((item) => {
+                          const pct = analyzed > 0 ? Math.round((item.value / analyzed) * 100) : 0;
+                          return (
+                            <div key={item.name}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                <span style={{ fontSize: "12px", color: c.text, display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: item.color, display: "inline-block", flexShrink: 0 }} />
+                                  {URGENCY_LABELS[item.name] || item.name}
+                                </span>
+                                <span style={{ fontSize: "12px", fontWeight: "700", color: item.color }}>{pct}%</span>
+                              </div>
+                              <div style={{ height: "4px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "2px", overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${pct}%`, background: item.color, borderRadius: "2px", transition: "width 0.6s ease" }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div style={{ height: "10px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "5px", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${coveragePercent}%`, background: "linear-gradient(90deg, #6366F1, #8B5CF6)", borderRadius: "5px", transition: "width 0.8s ease" }} />
-                </div>
-                {unanalyzed > 0 && (
-                  <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "10px" }}>
-                    {unanalyzed} e-mail{unanalyzed !== 1 ? "s" : ""} ainda sem análise — vá à caixa de entrada e clique em "Analisar com IA".
-                  </p>
-                )}
               </div>
-            )}
-          </>
-        )}
-      </main>
+
+              {/* Coverage */}
+              {stats?.total_emails > 0 && (
+                <div style={{ background: c.card, borderRadius: "16px", padding: isMobile ? "18px" : "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>Cobertura da análise IA</div>
+                      <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>
+                        {analyzed} de {stats.total_emails} e-mails analisados
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "28px", fontWeight: "800", color: "#6366F1", fontFamily: "Georgia, serif" }}>
+                      {coveragePercent}%
+                    </div>
+                  </div>
+                  <div style={{ height: "10px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "5px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${coveragePercent}%`, background: "linear-gradient(90deg, #6366F1, #8B5CF6)", borderRadius: "5px", transition: "width 0.8s ease" }} />
+                  </div>
+                  {unanalyzed > 0 && (
+                    <p style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "10px" }}>
+                      {unanalyzed} e-mail{unanalyzed !== 1 ? "s" : ""} ainda sem análise.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
 
 const lightColors = {
-  title: "#1A1A2E",
-  text: "#374151",
-  card: "white",
-  border: "#E5E7EB",
-  borderCard: "transparent",
-  shadow: "0 1px 3px rgba(0,0,0,0.05)",
+  title: "#1A1A2E", text: "#374151", card: "white",
+  border: "#E5E7EB", borderCard: "transparent", shadow: "0 1px 3px rgba(0,0,0,0.05)",
 };
-
 const darkColors = {
-  title: "#E5E7EB",
-  text: "#9CA3AF",
-  card: "#16161F",
-  border: "#2A2A3A",
-  borderCard: "#2A2A3A",
-  shadow: "none",
+  title: "#E5E7EB", text: "#9CA3AF", card: "#16161F",
+  border: "#2A2A3A", borderCard: "#2A2A3A", shadow: "none",
 };
