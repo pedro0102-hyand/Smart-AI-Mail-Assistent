@@ -64,8 +64,8 @@ def prepare_and_vectorize_data(df: pd.DataFrame):
     print("\n🧹 Aplicando pré-processamento (clean_text) em todos os e-mails...")
     df["clean_text"] = df["text"].apply(clean_text)
 
-    print("\n✂️  Dividindo em conjuntos de Treino (80%) e Teste (20%)...")
-    X_train, X_test, y_train, y_test = train_test_split(df["clean_text"],df["label"], test_size=0.20, random_state=42, stratify=df["label"])
+    print("\n✂️  Dividindo em conjuntos de Treino (70%) e Teste (30%)...")
+    X_train, X_test, y_train, y_test = train_test_split(df["clean_text"],df["label"], test_size=0.30, random_state=42, stratify=df["label"])
     print(f"   ✓ E-mails para Treino: {len(X_train):,}")
     print(f"   ✓ E-mails para Teste:  {len(X_test):,}")
 
