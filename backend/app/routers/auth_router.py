@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import requests
-
 from app.services.google_auth_service import get_google_auth_flow
 from app.core.database import get_db
 from app.core.security import create_access_token, get_current_user_id
@@ -10,14 +9,12 @@ from app.models.user_model import User
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-
 @router.get("/google")
 def auth_google():
     """Inicia o fluxo OAuth2 — redireciona o usuário para o Google."""
     flow = get_google_auth_flow()
     auth_url, _ = flow.authorization_url(prompt="consent")
     return RedirectResponse(auth_url)
-
 
 @router.get("/callback")
 def auth_callback(code: str, db: Session = Depends(get_db)):
@@ -31,10 +28,7 @@ def auth_callback(code: str, db: Session = Depends(get_db)):
     credentials = flow.credentials
 
     # 2. Buscar dados do perfil via Google API
-    userinfo_response = requests.get(
-        "https://www.googleapis.com/oauth2/v2/userinfo",
-        headers={"Authorization": f"Bearer {credentials.token}"},
-    )
+    userinfo_response = requests.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={"Authorization": f"Bearer {credentials.token}"},)
     if not userinfo_response.ok:
         raise HTTPException(status_code=400, detail="Falha ao buscar dados do usuário no Google.")
 

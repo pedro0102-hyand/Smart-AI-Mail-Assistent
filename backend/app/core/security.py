@@ -17,14 +17,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 horas
 
 security = HTTPBearer()
 
-
 def create_access_token(data: dict) -> str:
     """Gera um JWT com os dados do usuário."""
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def decode_access_token(token: str) -> dict:
     """Decodifica e valida um JWT. Lança exceção se inválido."""

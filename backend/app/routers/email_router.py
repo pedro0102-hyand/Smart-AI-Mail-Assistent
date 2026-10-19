@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-
 from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.models.user_model import User
@@ -10,7 +9,6 @@ from app.models.email_analysis_model import EmailAnalysis
 from app.services.gmail_service import fetch_emails, send_email
 
 router = APIRouter(prefix="/emails", tags=["Emails"])
-
 
 @router.post("/sync")
 def sync_emails(

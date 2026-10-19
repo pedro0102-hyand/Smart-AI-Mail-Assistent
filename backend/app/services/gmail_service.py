@@ -1,17 +1,14 @@
 import base64
 from email.mime.text import MIMEText
 from datetime import datetime
-
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from fastapi import HTTPException
-
 from app.core.config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 from app.core.database import SessionLocal
 from app.models.user_model import User
-
 
 def _build_gmail_service(access_token: str, refresh_token: str, user_id: int | None = None):
     """

@@ -1,12 +1,9 @@
 import json
 import time
 import logging
-
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, ServiceUnavailable, DeadlineExceeded
-
 from app.core.config import GEMINI_API_KEY
-
 logger = logging.getLogger(__name__)
 
 genai.configure(api_key=GEMINI_API_KEY)
@@ -91,18 +88,15 @@ E-MAIL:
             "suggested_reply": "",
         }
 
-
 # Mantém as funções individuais como wrappers para não quebrar
 # chamadas existentes em outros pontos do código
 def summarize_email(body: str) -> str:
     result = analyze_email("", body)
     return result["summary"]
 
-
 def classify_email(subject: str, body: str) -> dict:
     result = analyze_email(subject, body)
     return {"category": result["category"], "urgency": result["urgency"]}
-
 
 def suggest_reply(subject: str, body: str) -> str:
     result = analyze_email(subject, body)

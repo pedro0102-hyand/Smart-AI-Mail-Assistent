@@ -1,12 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.core.database import engine, Base
-
 from app.models import user_model            
 from app.models import email_model           
 from app.models import email_analysis_model  
-
 from app.routers import auth_router, email_router, ai_router
 
 app = FastAPI(title="Email Assistant API")

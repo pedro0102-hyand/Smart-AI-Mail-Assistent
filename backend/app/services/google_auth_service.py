@@ -13,7 +13,6 @@ SCOPES = [
     "openid",
 ]
 
-
 def get_google_auth_flow() -> Flow:
     return Flow.from_client_config(
         {

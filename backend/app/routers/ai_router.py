@@ -1,7 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-
 from app.core.database import get_db, SessionLocal
 from app.core.security import get_current_user_id
 from app.models.email_model import Email
