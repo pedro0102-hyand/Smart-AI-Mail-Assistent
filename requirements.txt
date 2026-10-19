@@ -1,0 +1,34 @@
+# API
+fastapi
+uvicorn[standard]
+itsdangerous
+
+# Variáveis de ambiente
+python-dotenv
+
+# Autenticação Google OAuth2
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+
+# Banco de dados
+sqlalchemy
+
+# JWT
+python-jose[cryptography]
+
+# Requisições HTTP
+requests
+
+# IA — Gemini
+google-generativeai
+
+# Tratamento de erros da API Google
+google-api-core
+
+# Machine Learning & PLN
+scikit-learn==1.9.1
+pandas==3.0.6
+joblib==1.6.0
+
