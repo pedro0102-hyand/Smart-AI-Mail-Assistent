@@ -26,3 +26,8 @@ google-generativeai
 
 # Tratamento de erros da API Google
 google-api-core
+
+# Machine Learning & PLN
+scikit-learn>=1.6.0
+pandas>=2.2.0
+joblib>=1.4.0
