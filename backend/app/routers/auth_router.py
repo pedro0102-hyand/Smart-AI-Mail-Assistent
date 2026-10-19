@@ -1,5 +1,8 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
+from starlette.requests import Request
 from sqlalchemy.orm import Session
 import requests
 from app.services.google_auth_service import get_google_auth_flow
@@ -10,20 +13,32 @@ from app.models.user_model import User
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.get("/google")
-def auth_google():
+def auth_google(request: Request):
     """Inicia o fluxo OAuth2 — redireciona o usuário para o Google."""
     flow = get_google_auth_flow()
-    auth_url, _ = flow.authorization_url(prompt="consent")
+    auth_url, state = flow.authorization_url(prompt="consent")
+    request.session["oauth_state"] = state
+    request.session["oauth_code_verifier"] = flow.code_verifier
     return RedirectResponse(auth_url)
 
 @router.get("/callback")
-def auth_callback(code: str, db: Session = Depends(get_db)):
+def auth_callback(request: Request, code: str, state: str, db: Session = Depends(get_db)):
     """
     Recebe o código do Google, troca por tokens,
     busca dados do usuário, salva no banco e retorna um JWT.
     """
+    expected_state = request.session.pop("oauth_state", None)
+    code_verifier = request.session.pop("oauth_code_verifier", None)
+    if (
+        not isinstance(expected_state, str)
+        or not isinstance(code_verifier, str)
+        or not secrets.compare_digest(state, expected_state)
+    ):
+        raise HTTPException(status_code=400, detail="Estado OAuth inválido ou expirado.")
+
     # 1. Trocar código por tokens
     flow = get_google_auth_flow()
+    flow.code_verifier = code_verifier
     flow.fetch_token(code=code)
     credentials = flow.credentials
 

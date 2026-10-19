@@ -1,6 +1,7 @@
 # API
 fastapi
 uvicorn[standard]
+itsdangerous
 
 # Variáveis de ambiente
 python-dotenv

@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from app.core.database import engine, Base
+from app.core.config import GOOGLE_REDIRECT_URI
+from app.core.security import SECRET_KEY
 from app.models import user_model            
 from app.models import email_model           
 from app.models import email_analysis_model  
@@ -26,6 +29,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    max_age=600,
+    https_only=GOOGLE_REDIRECT_URI.startswith("https://") if GOOGLE_REDIRECT_URI else False,
 )
 
 @app.get("/")
