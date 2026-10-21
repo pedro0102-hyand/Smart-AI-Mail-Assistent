@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -17,6 +17,8 @@ class Email(Base):
     body = Column(Text, nullable=True)                       # corpo completo
     date = Column(DateTime, nullable=True)
     is_read = Column(Boolean, default=False)
+    is_spam = Column(Boolean, default=False)
+    spam_score = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relacionamentos

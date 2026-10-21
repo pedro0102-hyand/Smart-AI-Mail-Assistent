@@ -7,6 +7,7 @@ from app.models.user_model import User
 from app.models.email_model import Email
 from app.models.email_analysis_model import EmailAnalysis
 from app.services.gmail_service import fetch_emails, send_email
+from app.ml.spam_service import predict_spam
 
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
@@ -26,15 +27,29 @@ def sync_emails(
         raise HTTPException(status_code=400, detail=f"Erro ao buscar e-mails: {str(e)}")
 
     new_count = 0
+    spam_count = 0
+
     for email_data in gmail_emails:
         exists = db.query(Email).filter(Email.gmail_id == email_data["gmail_id"]).first()
         if not exists:
-            new_email = Email(user_id=user_id, **email_data)
+
+            spam_info = predict_spam(
+                subject=email_data.get("subject", "") or "",
+                body=email_data.get("body", "") or ""
+            )
+            new_email = Email(
+                user_id=user_id,
+                is_spam=spam_info["is_spam"],
+                spam_score=spam_info["spam_probability"],
+                **email_data
+            )
             db.add(new_email)
             new_count += 1
+            if spam_info["is_spam"]:
+                spam_count += 1
 
     db.commit()
-    return {"message": "Sincronização concluída.", "novos_emails": new_count}
+    return {"message": "Sincronização concluída.", "novos_emails": new_count, "spams_detectados": spam_count}
 
 
 @router.get("/stats")
@@ -61,10 +76,12 @@ def get_stats(
 
     total = db.query(func.count(Email.id)).filter(Email.user_id == user_id).scalar()
     unread = db.query(func.count(Email.id)).filter(Email.user_id == user_id, Email.is_read == False).scalar()
+    spam = db.query(func.count(Email.id)).filter(Email.user_id == user_id, Email.is_spam == True).scalar()
 
     return {
         "total_emails": total,
         "unread": unread,
+        "spam": spam,
         "by_category": {row.category: row.total for row in by_category},
         "by_urgency": {row.urgency: row.total for row in by_urgency},
     }
@@ -76,12 +93,19 @@ def list_emails(
     user_id: int = Depends(get_current_user_id),
     skip: int = 0,
     limit: int = 20,
+    is_spam: bool | None = None,
 ):
-    """Retorna lista de e-mails com análise da IA incluída."""
-    emails = (
+    """Retorna lista de e-mails com análise da IA e flags de spam incluídas."""
+    query = (
         db.query(Email)
         .options(joinedload(Email.analysis))
         .filter(Email.user_id == user_id)
+    )
+    if is_spam is not None:
+        query = query.filter(Email.is_spam == is_spam)
+
+    emails = (
+        query
         .order_by(Email.date.desc())
         .offset(skip)
         .limit(limit)
@@ -97,6 +121,8 @@ def list_emails(
             "snippet": e.snippet,
             "date": e.date,
             "is_read": e.is_read,
+            "is_spam": e.is_spam,
+            "spam_score": e.spam_score,
             "analysis": {
                 "summary": e.analysis.summary,
                 "category": e.analysis.category,
@@ -133,6 +159,8 @@ def get_email(
         "body": email.body,
         "date": email.date,
         "is_read": email.is_read,
+        "is_spam": email.is_spam,
+        "spam_score": email.spam_score,
         "analysis": {
             "summary": email.analysis.summary,
             "category": email.analysis.category,
