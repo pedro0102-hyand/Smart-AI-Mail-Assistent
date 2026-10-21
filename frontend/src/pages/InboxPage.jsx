@@ -1,43 +1,25 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar, { MobileHeader } from "../components/Sidebar";
 import { api } from "../api";
 import { useTheme } from "../App";
 
-const CATEGORY_COLORS = {
-  trabalho:   { bg: "#DBEAFE", text: "#1D4ED8" },
-  financeiro: { bg: "#FEE2E2", text: "#DC2626" },
-  pessoal:    { bg: "#D1FAE5", text: "#059669" },
-  marketing:  { bg: "#FEF3C7", text: "#D97706" },
-  spam:       { bg: "#F3F4F6", text: "#6B7280" },
-  suporte:    { bg: "#EDE9FE", text: "#7C3AED" },
-  outro:      { bg: "#F3F4F6", text: "#6B7280" },
-};
-
-const CATEGORY_COLORS_DARK = {
-  trabalho:   { bg: "#1E3A5F", text: "#60A5FA" },
-  financeiro: { bg: "#4C1919", text: "#FCA5A5" },
-  pessoal:    { bg: "#064E3B", text: "#6EE7B7" },
-  marketing:  { bg: "#451A03", text: "#FCD34D" },
-  spam:       { bg: "#1F2937", text: "#9CA3AF" },
-  suporte:    { bg: "#2E1065", text: "#C4B5FD" },
-  outro:      { bg: "#1F2937", text: "#9CA3AF" },
-};
-
-const URGENCY_DOT = {
-  alta:  "#EF4444",
-  média: "#F59E0B",
-  baixa: "#10B981",
+const URGENCY_CLASS = {
+  alta: "urgency-high",
+  média: "urgency-medium",
+  baixa: "urgency-low",
 };
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+
   const now = new Date();
-  const diff = now - d;
-  if (diff < 86400000) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  if (diff < 604800000) return d.toLocaleDateString("pt-BR", { weekday: "short" });
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  const diff = now - date;
+  if (diff < 86400000) return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (diff < 604800000) return date.toLocaleDateString("pt-BR", { weekday: "short" });
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
 function useIsMobile() {
@@ -48,6 +30,23 @@ function useIsMobile() {
     return () => window.removeEventListener("resize", handler);
   }, []);
   return isMobile;
+}
+
+function MailIcon({ name }) {
+  const paths = {
+    all: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+    inbox: <><path d="M4 4h16v16H4z" /><path d="M4 13h4l2 3h4l2-3h4" /></>,
+    spam: <><path d="M12 3 2.8 19h18.4L12 3Z" /><path d="M12 9v4m0 3h.01" /></>,
+    search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+    refresh: <><path d="M20 7v5h-5" /><path d="M4 17v-5h5" /><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2" /></>,
+    sparkle: <><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z" /><path d="m19 14 1.1 2.4L22 17l-1.9.7L19 20l-.9-2.3L16 17l2.1-.6L19 14Z" /></>,
+  };
+
+  return (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {paths[name]}
+    </svg>
+  );
 }
 
 export default function InboxPage() {
@@ -61,6 +60,7 @@ export default function InboxPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [message, setMessage] = useState(null);
   const [spamFilter, setSpamFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const loadEmails = useCallback(async () => {
     try {
@@ -80,8 +80,8 @@ export default function InboxPage() {
   async function handleSync() {
     try {
       setSyncing(true);
-      const res = await api.syncEmails();
-      setMessage({ type: "success", text: `${res.novos_emails} novos e-mails sincronizados.` });
+      const result = await api.syncEmails();
+      setMessage({ type: "success", text: `${result.novos_emails} novos e-mails sincronizados.` });
       await loadEmails();
     } catch (e) {
       setMessage({ type: "error", text: e.message });
@@ -94,8 +94,8 @@ export default function InboxPage() {
   async function handleAnalyzeAll() {
     try {
       setAnalyzing(true);
-      const res = await api.analyzeAll();
-      setMessage({ type: "success", text: `${res.processados} e-mails analisados pela IA.` });
+      const result = await api.analyzeAll();
+      setMessage({ type: "success", text: `${result.processados} e-mails analisados pela IA.` });
       await loadEmails();
     } catch (e) {
       setMessage({ type: "error", text: e.message });
@@ -105,16 +105,25 @@ export default function InboxPage() {
     }
   }
 
-  const CATS = dark ? CATEGORY_COLORS_DARK : CATEGORY_COLORS;
-  const pageBg = dark ? "#0F0F14" : "#F8F7F4";
-  const cardBg = dark ? "#16161F" : "white";
-  const borderColor = dark ? "#2A2A3A" : "#E5E7EB";
-  const titleColor = dark ? "#E5E7EB" : "#1A1A2E";
-  const textColor = dark ? "#9CA3AF" : "#374151";
+  const filteredEmails = useMemo(() => {
+    const query = searchTerm.trim().toLocaleLowerCase("pt-BR");
+    if (!query) return emails;
+    return emails.filter((email) =>
+      [email.sender, email.subject, email.snippet, email.analysis?.summary]
+        .some((value) => value?.toLocaleLowerCase("pt-BR").includes(query)),
+    );
+  }, [emails, searchTerm]);
+
+  const unreadCount = emails.filter((email) => !email.is_read).length;
+  const spamCount = emails.filter((email) => email.is_spam).length;
+  const tabs = [
+    { id: "all", label: "Todos", icon: "all" },
+    { id: "inbox", label: "Caixa limpa", icon: "inbox" },
+    { id: "spam", label: "Spam", icon: "spam" },
+  ];
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: pageBg, fontFamily: "system-ui, sans-serif", transition: "background 0.3s" }}>
-      {/* Sidebar — hidden on mobile unless open */}
+    <div className={`app-shell ${dark ? "theme-dark" : "theme-light"}`}>
       {!isMobile && <Sidebar />}
       {isMobile && (
         <Sidebar
@@ -123,229 +132,159 @@ export default function InboxPage() {
         />
       )}
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        {/* Mobile top bar */}
+      <div className="app-main-column">
         {isMobile && <MobileHeader onOpen={() => setSidebarOpen(true)} dark={dark} />}
 
-        <main style={{ flex: 1, padding: isMobile ? "16px" : "36px 40px", maxWidth: "900px", width: "100%" }}>
-          {/* Header */}
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: isMobile ? "stretch" : "flex-start",
-            flexDirection: isMobile ? "column" : "row",
-            marginBottom: "28px",
-            gap: "12px",
-          }}>
-            <div>
-              <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: "700", color: titleColor, margin: 0, fontFamily: "Georgia, serif" }}>
-                Caixa de entrada
-              </h1>
-              <p style={{ fontSize: "13px", color: "#9CA3AF", margin: "4px 0 0" }}>
-                {emails.length} e-mails carregados
-              </p>
+        <main className="inbox-main">
+          <header className="inbox-page-header">
+            <div className="inbox-heading">
+              <span className="inbox-eyebrow"><span className="inbox-eyebrow-dot" /> SEU ESPAÇO DE TRABALHO</span>
+              <h1>Caixa de entrada</h1>
+              <p>Seus e-mails, organizados com inteligência.</p>
             </div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: isMobile ? "wrap" : "nowrap" }}>
-              <button
-                style={{
-                  flex: isMobile ? 1 : "unset",
-                  padding: "9px 14px",
-                  border: `1.5px solid ${borderColor}`,
-                  borderRadius: "10px",
-                  background: cardBg,
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  color: textColor,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-                onClick={handleSync}
-                disabled={syncing}
-              >
-                {syncing ? "Sincronizando..." : "↻ Sincronizar"}
+            <div className="inbox-header-actions">
+              <button className="inbox-button inbox-button-secondary" onClick={handleSync} disabled={syncing} type="button">
+                <MailIcon name="refresh" />
+                <span>{syncing ? "Sincronizando..." : "Sincronizar"}</span>
               </button>
-              <button
-                style={{
-                  flex: isMobile ? 1 : "unset",
-                  padding: "9px 14px",
-                  border: "none",
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, #6366F1, #8B5CF6)",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  color: "white",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-                onClick={handleAnalyzeAll}
-                disabled={analyzing}
-              >
-                {analyzing ? "Analisando..." : "✦ Analisar com IA"}
+              <button className="inbox-button inbox-button-primary" onClick={handleAnalyzeAll} disabled={analyzing} type="button">
+                <MailIcon name="sparkle" />
+                <span>{analyzing ? "Analisando..." : "Analisar com IA"}</span>
               </button>
             </div>
-          </div>
+          </header>
 
-          {/* Toast */}
           {message && (
-            <div style={{
-              padding: "12px 16px", borderRadius: "10px", fontSize: "14px", marginBottom: "16px", fontWeight: "500",
-              background: message.type === "error" ? (dark ? "#4C1919" : "#FEE2E2") : (dark ? "#064E3B" : "#D1FAE5"),
-              color: message.type === "error" ? (dark ? "#FCA5A5" : "#DC2626") : (dark ? "#6EE7B7" : "#059669"),
-            }}>
-              {message.text}
+            <div className={`inbox-notice ${message.type}`} role={message.type === "error" ? "alert" : "status"}>
+              <span className="inbox-notice-mark">{message.type === "error" ? "!" : "✓"}</span>
+              <span>{message.text}</span>
+              <button type="button" onClick={() => setMessage(null)} aria-label="Fechar aviso">×</button>
             </div>
           )}
 
-          <div role="tablist" aria-label="Filtrar e-mails" style={{ display: "flex", gap: "8px", marginBottom: "18px", flexWrap: "wrap" }}>
-            {[
-              { id: "all", label: "Todos" },
-              { id: "inbox", label: "📥 Caixa de Entrada (Limpa)" },
-              { id: "spam", label: "🚨 Spam" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={spamFilter === tab.id}
-                onClick={() => setSpamFilter(tab.id)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  border: "none",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  background: spamFilter === tab.id ? (dark ? "#3B82F6" : "#2563EB") : (dark ? "#1F2937" : "#E5E7EB"),
-                  color: spamFilter === tab.id ? "white" : (dark ? "#9CA3AF" : "#4B5563"),
-                  transition: "all 0.2s",
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <section className="inbox-stat-grid" aria-label="Resumo dos e-mails carregados">
+            <article className="inbox-stat-card">
+              <span className="inbox-stat-icon stat-icon-indigo"><MailIcon name="all" /></span>
+              <div><strong>{emails.length}</strong><span>E-mails carregados</span></div>
+              <span className="inbox-stat-note">últimos 50</span>
+            </article>
+            <article className="inbox-stat-card">
+              <span className="inbox-stat-icon stat-icon-blue"><MailIcon name="inbox" /></span>
+              <div><strong>{unreadCount}</strong><span>Não lidos</span></div>
+            </article>
+            <article className="inbox-stat-card">
+              <span className="inbox-stat-icon stat-icon-rose"><MailIcon name="spam" /></span>
+              <div><strong>{spamCount}</strong><span>Spams identificados</span></div>
+              <span className="inbox-stat-note">Naive Bayes</span>
+            </article>
+          </section>
 
-          {/* Email list */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ height: "80px", background: dark ? "#16161F" : "#F3F4F6", borderRadius: "12px", marginBottom: "2px", opacity: 0.7 }} />
-              ))
-            ) : emails.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 0", color: "#9CA3AF", fontSize: "14px" }}>
-                <p>Nenhum e-mail encontrado. Clique em "Sincronizar".</p>
+          <section className="inbox-list-panel" aria-label="Lista de e-mails">
+            <div className="inbox-list-heading">
+              <div>
+                <h2>Seus e-mails</h2>
+                <p>Consulte, filtre e acompanhe suas mensagens.</p>
               </div>
-            ) : (
-              emails.map((email) => {
-                const cat = email.analysis?.category || null;
-                const catStyle = cat ? (CATS[cat] || CATS.outro) : null;
-                const urgency = email.analysis?.urgency || null;
-                const rowBg = dark ? (email.is_read ? "#16161F" : "#1A1A2E") : (email.is_read ? "white" : "#FDFCFF");
-                return (
-                  <div
-                    key={email.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: isMobile ? "10px" : "14px",
-                      padding: isMobile ? "12px 14px" : "16px 20px",
-                      background: rowBg,
-                      borderRadius: "12px",
-                      cursor: "pointer",
-                      transition: "background 0.15s",
-                      border: `1px solid ${dark ? "#1E1E2E" : "transparent"}`,
-                    }}
-                    onClick={() => navigate(`/email/${email.id}`)}
-                    onMouseEnter={e => e.currentTarget.style.background = dark ? "#1E1E2E" : "#FAFAFA"}
-                    onMouseLeave={e => e.currentTarget.style.background = rowBg}
+              <span className="inbox-results-count">{filteredEmails.length} {filteredEmails.length === 1 ? "mensagem" : "mensagens"}</span>
+            </div>
+
+            <div className="inbox-toolbar">
+              <div className="inbox-tabs" role="tablist" aria-label="Filtrar e-mails">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={spamFilter === tab.id}
+                    className={`inbox-tab ${spamFilter === tab.id ? "active" : ""}`}
+                    onClick={() => setSpamFilter(tab.id)}
                   >
-                    {/* Avatar */}
-                    <div style={{
-                      width: isMobile ? "34px" : "40px",
-                      height: isMobile ? "34px" : "40px",
-                      borderRadius: "50%",
-                      background: `hsl(${(email.sender?.charCodeAt(0) || 0) * 15}, 60%, 55%)`,
-                      color: "white",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: isMobile ? "13px" : "15px",
-                      fontWeight: "700",
-                      flexShrink: 0,
-                    }}>
-                      {(email.sender || "?")[0].toUpperCase()}
-                    </div>
+                    <MailIcon name={tab.icon} />
+                    <span>{tab.label}</span>
+                    {tab.id === "spam" && spamCount > 0 && <span className="inbox-tab-count">{spamCount}</span>}
+                  </button>
+                ))}
+              </div>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px", gap: "8px" }}>
-                        <span style={{
-                          fontSize: isMobile ? "13px" : "14px",
-                          color: dark ? "#E5E7EB" : "#1A1A2E",
-                          fontWeight: email.is_read ? 500 : 700,
-                          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                          maxWidth: isMobile ? "140px" : "unset",
-                        }}>
-                          {email.sender?.split("<")[0].trim() || "Desconhecido"}
-                        </span>
-                        <span style={{ fontSize: "11px", color: "#9CA3AF", flexShrink: 0 }}>
-                          {formatDate(email.date)}
-                        </span>
-                      </div>
+              <label className="inbox-search">
+                <MailIcon name="search" />
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Buscar e-mails..."
+                  aria-label="Buscar e-mails"
+                />
+                {searchTerm && (
+                  <button type="button" onClick={() => setSearchTerm("")} aria-label="Limpar busca">×</button>
+                )}
+              </label>
+            </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" }}>
-                        <span style={{
-                          fontSize: isMobile ? "12px" : "13px",
-                          color: dark ? "#9CA3AF" : "#374151",
-                          fontWeight: email.is_read ? 400 : 600,
-                          flex: 1,
-                          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                        }}>
-                          {email.subject}
-                        </span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
-                          {urgency && (
-                            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: URGENCY_DOT[urgency] || "#ccc", flexShrink: 0 }} title={urgency} />
-                          )}
-                          {cat && !isMobile && (
-                            <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "6px", background: catStyle.bg, color: catStyle.text, whiteSpace: "nowrap" }}>
-                              {cat}
-                            </span>
-                          )}
-                          {email.is_spam && (
-                            <span style={{
-                              fontSize: isMobile ? "10px" : "11px",
-                              fontWeight: "700",
-                              padding: "2px 8px",
-                              borderRadius: "6px",
-                              background: dark ? "#4C1919" : "#FEE2E2",
-                              color: dark ? "#FCA5A5" : "#DC2626",
-                              border: `1px solid ${dark ? "#7F1D1D" : "#FECACA"}`,
-                              whiteSpace: "nowrap",
-                            }}>
-                              🚨 Spam {typeof email.spam_score === "number" ? `(${Math.round(email.spam_score * 100)}%)` : ""}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            <div className="inbox-email-list" aria-live="polite">
+              {loading ? (
+                <div className="inbox-skeleton-list" aria-label="Carregando e-mails">
+                  {Array.from({ length: 5 }).map((_, index) => <div key={index} className="inbox-skeleton" />)}
+                </div>
+              ) : filteredEmails.length === 0 ? (
+                <div className="inbox-empty-state">
+                  <span className="inbox-empty-icon"><MailIcon name={searchTerm ? "search" : spamFilter === "spam" ? "spam" : "inbox"} /></span>
+                  <h3>{searchTerm ? "Nenhum resultado para sua busca" : spamFilter === "spam" ? "Nenhum spam encontrado" : "Sua caixa está vazia"}</h3>
+                  <p>{searchTerm ? "Tente pesquisar por outro remetente, assunto ou conteúdo." : "Sincronize sua conta para carregar suas mensagens."}</p>
+                  {!searchTerm && spamFilter !== "spam" && (
+                    <button className="inbox-button inbox-button-secondary" onClick={handleSync} disabled={syncing} type="button">
+                      <MailIcon name="refresh" />
+                      <span>{syncing ? "Sincronizando..." : "Sincronizar e-mails"}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredEmails.map((email) => {
+                  const category = email.analysis?.category;
+                  const urgency = email.analysis?.urgency;
+                  const sender = email.sender?.split("<")[0].trim() || "Desconhecido";
+                  const initial = sender.charAt(0).toLocaleUpperCase("pt-BR");
+                  const avatarHue = (sender.charCodeAt(0) || 0) * 15;
 
-                      {/* Mobile: show category badge below subject */}
-                      {isMobile && cat && (
-                        <div style={{ marginTop: "4px" }}>
-                          <span style={{ fontSize: "10px", fontWeight: "600", padding: "2px 6px", borderRadius: "5px", background: catStyle.bg, color: catStyle.text }}>
-                            {cat}
+                  return (
+                    <button
+                      key={email.id}
+                      className={`inbox-email-row ${email.is_read ? "" : "unread"} ${email.is_spam ? "is-spam" : ""}`}
+                      type="button"
+                      onClick={() => navigate(`/email/${email.id}`)}
+                      aria-label={`Abrir e-mail de ${sender}: ${email.subject || "sem assunto"}`}
+                    >
+                      <span className="inbox-email-avatar" style={{ "--avatar-hue": avatarHue }}>{initial}</span>
+                      <span className="inbox-email-content">
+                        <span className="inbox-email-topline">
+                          <span className="inbox-email-sender">{sender}</span>
+                          <span className="inbox-email-date">{formatDate(email.date)}</span>
+                        </span>
+                        <span className="inbox-email-subject-line">
+                          <span className="inbox-email-subject">{email.subject || "(sem assunto)"}</span>
+                          <span className="inbox-email-badges">
+                            {urgency && <span className={`inbox-urgency-dot ${URGENCY_CLASS[urgency] || ""}`} title={`Urgência ${urgency}`} />}
+                            {category && <span className={`inbox-category category-${category}`}>{category}</span>}
+                            {email.is_spam && (
+                              <span className="inbox-spam-badge">
+                                <MailIcon name="spam" />
+                                Spam{typeof email.spam_score === "number" ? ` · ${Math.round(email.spam_score * 100)}%` : ""}
+                              </span>
+                            )}
                           </span>
-                        </div>
-                      )}
-
-                      {email.analysis?.summary && !isMobile && (
-                        <p style={{ fontSize: "12px", color: dark ? "#6B7280" : "#9CA3AF", margin: "4px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {email.analysis.summary}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
+                        </span>
+                        <span className="inbox-email-snippet">{email.analysis?.summary || email.snippet || "Abra para ver o conteúdo desta mensagem."}</span>
+                      </span>
+                      {!email.is_read && <span className="inbox-unread-indicator" aria-label="Não lido" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            {!loading && emails.length === 50 && (
+              <div className="inbox-list-footer">Exibindo os 50 e-mails mais recentes.</div>
             )}
-          </div>
+          </section>
         </main>
       </div>
     </div>

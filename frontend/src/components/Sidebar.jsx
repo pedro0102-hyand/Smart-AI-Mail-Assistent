@@ -126,12 +126,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
         />
       )}
 
-      <aside style={sidebarStyle}>
+      <aside className="app-sidebar" style={sidebarStyle}>
         {/* Close button on mobile */}
         {isMobile && (
           <button
             onClick={onMobileClose}
             style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", cursor: "pointer", color: dark ? "#9CA3AF" : "#6B7280", padding: 4, borderRadius: 6 }}
+            aria-label="Fechar menu"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -155,7 +156,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
               <button
                 key={item.path}
                 onClick={() => handleNavClick(item.path)}
+                className={`app-sidebar-nav-item ${active ? "active" : ""}`}
                 style={{ ...s.navItem, ...(active ? s.navItemActive : {}) }}
+                aria-current={active ? "page" : undefined}
               >
                 <span style={{ color: active ? "#6366F1" : dark ? "#6B7280" : "#9CA3AF" }}>{item.icon}</span>
                 <span style={{ ...s.navLabel, color: active ? (dark ? "#E5E7EB" : "#1A1A2E") : dark ? "#9CA3AF" : "#6B7280" }}>
@@ -198,17 +201,17 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
 
 function getStyles(dark) {
   return {
-    sidebar: { width: "220px", minHeight: "100vh", background: dark ? "#16161F" : "white", borderRight: `1px solid ${dark ? "#2A2A3A" : "#F3F4F6"}`, display: "flex", flexDirection: "column", padding: "24px 16px", flexShrink: 0, transition: "background 0.3s, border-color 0.3s" },
-    brand: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "36px", paddingLeft: "8px" },
-    logoIcon: { width: "32px", height: "32px", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-    brandName: { fontSize: "15px", fontWeight: "700", color: dark ? "#E5E7EB" : "#1A1A2E", letterSpacing: "-0.3px", fontFamily: "Georgia, serif" },
-    nav: { display: "flex", flexDirection: "column", gap: "4px", flex: 1 },
-    navItem: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", border: "none", background: "transparent", cursor: "pointer", transition: "background 0.15s", width: "100%", textAlign: "left" },
-    navItemActive: { background: dark ? "#1E1E2E" : "#F5F3FF" },
-    navLabel: { fontSize: "14px", fontWeight: "500", fontFamily: "system-ui, sans-serif" },
-    darkToggle: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", border: `1px solid ${dark ? "#2A2A3A" : "#F3F4F6"}`, background: dark ? "#1E1E2E" : "#FAFAFA", cursor: "pointer", borderRadius: "10px", marginBottom: "8px", width: "100%" },
+    sidebar: { position: "sticky", top: 0, width: "248px", height: "100vh", minHeight: "100vh", background: dark ? "#11182a" : "#fff", borderRight: `1px solid ${dark ? "#26314a" : "#e8ebf3"}`, display: "flex", flexDirection: "column", padding: "28px 18px 20px", flexShrink: 0, transition: "background 0.3s, border-color 0.3s" },
+    brand: { display: "flex", alignItems: "center", gap: "11px", marginBottom: "48px", paddingLeft: "5px" },
+    logoIcon: { width: "36px", height: "36px", background: "linear-gradient(135deg, #5D66E9, #8060DF)", borderRadius: "11px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 5px 12px rgba(98, 89, 220, 0.2)" },
+    brandName: { fontSize: "14px", fontWeight: "750", color: dark ? "#E8ECF8" : "#17213F", letterSpacing: "-0.4px", fontFamily: "system-ui, sans-serif" },
+    nav: { display: "flex", flexDirection: "column", gap: "6px", flex: 1 },
+    navItem: { display: "flex", alignItems: "center", gap: "12px", padding: "12px 13px", borderRadius: "11px", border: "none", background: "transparent", cursor: "pointer", transition: "background 0.15s", width: "100%", textAlign: "left" },
+    navItemActive: { background: dark ? "#252449" : "#f0efff" },
+    navLabel: { fontSize: "13px", fontWeight: "600", fontFamily: "system-ui, sans-serif" },
+    darkToggle: { display: "flex", alignItems: "center", gap: "9px", padding: "11px 12px", border: `1px solid ${dark ? "#26314a" : "#e8ebf3"}`, background: dark ? "#182137" : "#f8f9fd", cursor: "pointer", borderRadius: "11px", marginBottom: "8px", width: "100%" },
     darkToggleText: { fontSize: "13px", color: dark ? "#9CA3AF" : "#6B7280", fontFamily: "system-ui, sans-serif" },
-    logout: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", borderRadius: "10px" },
+    logout: { display: "flex", alignItems: "center", gap: "9px", padding: "11px 12px", border: "none", background: "transparent", cursor: "pointer", borderRadius: "10px" },
     logoutText: { fontSize: "14px", color: dark ? "#6B7280" : "#9CA3AF", fontFamily: "system-ui, sans-serif" },
   };
 }
