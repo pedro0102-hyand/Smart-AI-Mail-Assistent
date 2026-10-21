@@ -293,6 +293,32 @@ export default function EmailDetailPage() {
                 </div>
               )}
 
+              {email.is_spam && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "16px 20px",
+                  borderRadius: "14px",
+                  marginBottom: "16px",
+                  background: dark ? "#3B1212" : "#FEF2F2",
+                  border: `1.5px solid ${dark ? "#7F1D1D" : "#F87171"}`,
+                  color: dark ? "#FCA5A5" : "#991B1B",
+                }}>
+                  <span style={{ fontSize: "24px" }}>⚠️</span>
+                  <div>
+                    <div style={{ fontWeight: "700", fontSize: "14px" }}>
+                      Atenção: E-mail identificado como Spam ou Phishing
+                    </div>
+                    <div style={{ fontSize: "13px", opacity: 0.9, marginTop: "2px" }}>
+                      Nosso classificador Naive Bayes detectou este e-mail como suspeito com{" "}
+                      <strong>{Math.round((email.spam_score ?? 0) * 100)}% de probabilidade</strong>.
+                      {" "}Desconfie de solicitações de senhas, boletos ou links externos.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Email body */}
               <div style={{ background: c.card, borderRadius: "16px", padding: isMobile ? "18px" : "28px", marginBottom: "16px", boxShadow: c.shadow, border: `1px solid ${c.border}` }}>
                 <div style={{ fontSize: "11px", fontWeight: "700", color: c.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "16px" }}>

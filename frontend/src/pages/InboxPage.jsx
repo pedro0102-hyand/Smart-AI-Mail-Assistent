@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar, { MobileHeader } from "../components/Sidebar";
 import { api } from "../api";
@@ -60,20 +60,22 @@ export default function InboxPage() {
   const [syncing, setSyncing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [message, setMessage] = useState(null);
+  const [spamFilter, setSpamFilter] = useState("all");
 
-  useEffect(() => { loadEmails(); }, []);
-
-  async function loadEmails() {
+  const loadEmails = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.getEmails();
+      const isSpamParam = spamFilter === "all" ? null : spamFilter === "spam";
+      const data = await api.getEmails(0, 50, isSpamParam);
       setEmails(data);
     } catch (e) {
       setMessage({ type: "error", text: e.message });
     } finally {
       setLoading(false);
     }
-  }
+  }, [spamFilter]);
+
+  useEffect(() => { loadEmails(); }, [loadEmails]);
 
   async function handleSync() {
     try {
@@ -194,6 +196,35 @@ export default function InboxPage() {
             </div>
           )}
 
+          <div role="tablist" aria-label="Filtrar e-mails" style={{ display: "flex", gap: "8px", marginBottom: "18px", flexWrap: "wrap" }}>
+            {[
+              { id: "all", label: "Todos" },
+              { id: "inbox", label: "📥 Caixa de Entrada (Limpa)" },
+              { id: "spam", label: "🚨 Spam" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={spamFilter === tab.id}
+                onClick={() => setSpamFilter(tab.id)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  background: spamFilter === tab.id ? (dark ? "#3B82F6" : "#2563EB") : (dark ? "#1F2937" : "#E5E7EB"),
+                  color: spamFilter === tab.id ? "white" : (dark ? "#9CA3AF" : "#4B5563"),
+                  transition: "all 0.2s",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Email list */}
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             {loading ? (
@@ -276,6 +307,20 @@ export default function InboxPage() {
                           {cat && !isMobile && (
                             <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "6px", background: catStyle.bg, color: catStyle.text, whiteSpace: "nowrap" }}>
                               {cat}
+                            </span>
+                          )}
+                          {email.is_spam && (
+                            <span style={{
+                              fontSize: isMobile ? "10px" : "11px",
+                              fontWeight: "700",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              background: dark ? "#4C1919" : "#FEE2E2",
+                              color: dark ? "#FCA5A5" : "#DC2626",
+                              border: `1px solid ${dark ? "#7F1D1D" : "#FECACA"}`,
+                              whiteSpace: "nowrap",
+                            }}>
+                              🚨 Spam {typeof email.spam_score === "number" ? `(${Math.round(email.spam_score * 100)}%)` : ""}
                             </span>
                           )}
                         </div>

@@ -30,8 +30,11 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  getEmails: (skip = 0, limit = 20) =>
-    request(`/emails/?skip=${skip}&limit=${limit}`),
+  getEmails: (skip = 0, limit = 20, isSpam = null) => {
+    let url = `/emails/?skip=${skip}&limit=${limit}`;
+    if (isSpam !== null) url += `&is_spam=${isSpam}`;
+    return request(url);
+  },
   getEmail: (id) => request(`/emails/${id}`),
   syncEmails: () => request("/emails/sync", { method: "POST" }),
   getStats: () => request("/emails/stats"),

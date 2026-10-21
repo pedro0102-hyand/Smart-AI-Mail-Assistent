@@ -142,13 +142,14 @@ export default function DashboardPage() {
   const kpis = [
     { label: "Total de e-mails",   value: stats?.total_emails ?? "—", icon: "📧", bg: dark ? "#1E1E2E" : "#EEF2FF" },
     { label: "Não lidos",           value: stats?.unread ?? "—",       icon: "🔴", bg: dark ? "#2A1515" : "#FEF2F2" },
+    { label: "Spams Filtrados",     value: stats?.spam ?? "—",          icon: "🚨", bg: dark ? "#4C1919" : "#FEF2F2" },
     { label: "Analisados pela IA",  value: analyzed,                   icon: "✦",  bg: dark ? "#0D2A1E" : "#ECFDF5" },
     { label: "Cobertura IA",        value: `${coveragePercent}%`,      icon: "📊", bg: dark ? "#2A1F0D" : "#FFFBEB" },
   ];
 
   const padding = isMobile ? "16px" : "36px 40px";
   const titleSize = isMobile ? "20px" : "24px";
-  const kpiCols = isMobile ? "repeat(2, 1fr)" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)";
+  const kpiCols = isMobile ? "repeat(2, 1fr)" : isTablet ? "repeat(2, 1fr)" : "repeat(5, 1fr)";
   const chartCols = isTablet ? "1fr" : "1fr 1fr";
 
   return (
