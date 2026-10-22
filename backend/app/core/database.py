@@ -5,14 +5,7 @@ from sqlalchemy.orm import sessionmaker
 DATABASE_URL = "sqlite:///./email_assistant.db"
 
 #conexao com o banco de dados
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}  # necessário pro SQLite
-)
-
-#criando sessao no banco de dados
-#autocommit = controle de salvamento
-#autoflush = controlar envio de alteracoes no banco
+engine = create_engine(DATABASE_URL,connect_args={"check_same_thread": False}  )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

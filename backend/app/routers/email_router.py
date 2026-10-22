@@ -51,7 +51,6 @@ def sync_emails(
     db.commit()
     return {"message": "Sincronização concluída.", "novos_emails": new_count, "spams_detectados": spam_count}
 
-
 @router.get("/stats")
 def get_stats(
     db: Session = Depends(get_db),
@@ -85,7 +84,6 @@ def get_stats(
         "by_category": {row.category: row.total for row in by_category},
         "by_urgency": {row.urgency: row.total for row in by_urgency},
     }
-
 
 @router.get("/")
 def list_emails(
@@ -132,7 +130,6 @@ def list_emails(
         for e in emails
     ]
 
-
 @router.get("/{email_id}")
 def get_email(
     email_id: int,
@@ -168,7 +165,6 @@ def get_email(
             "suggested_reply": email.analysis.suggested_reply,
         } if email.analysis else None,
     }
-
 
 @router.post("/{email_id}/reply")
 def reply_email(

@@ -52,7 +52,6 @@ def _build_gmail_service(access_token: str, refresh_token: str, user_id: int | N
 
     return build("gmail", "v1", credentials=credentials)
 
-
 def _decode_body(payload: dict) -> str:
     """
     Extrai o corpo do e-mail priorizando HTML sobre texto plano.
@@ -85,10 +84,8 @@ def _decode_body(payload: dict) -> str:
 
     return html_body or plain_body
 
-
 def _parse_headers(headers: list) -> dict:
     return {h["name"].lower(): h["value"] for h in headers}
-
 
 def fetch_emails(
     access_token: str,
@@ -140,7 +137,6 @@ def fetch_emails(
         })
 
     return emails
-
 
 def send_email(
     access_token: str,

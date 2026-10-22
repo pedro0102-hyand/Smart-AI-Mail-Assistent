@@ -15,7 +15,6 @@ app = FastAPI(title="Email Assistant API")
 Base.metadata.create_all(bind=engine)
 
 # CORS — permite o front em localhost:3000 se comunicar com o back
-
 app.include_router(auth_router.router)
 app.include_router(email_router.router)
 app.include_router(ai_router.router)

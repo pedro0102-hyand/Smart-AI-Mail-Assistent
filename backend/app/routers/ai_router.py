@@ -8,14 +8,8 @@ from app.models.email_analysis_model import EmailAnalysis
 from app.services.ai_service import analyze_email
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/ai", tags=["AI"])
-
-# Dicionário em memória para rastrear o progresso dos jobs em background.
-# Chave: user_id | Valor: dict com status do job
-# Nota: em produção com múltiplos workers, substituir por Redis.
 _jobs: dict[int, dict] = {}
-
 
 def _run_analyze_all(user_id: int) -> None:
     """
@@ -77,7 +71,6 @@ def _run_analyze_all(user_id: int) -> None:
     finally:
         db.close()
 
-
 @router.post("/analyze/{email_id}")
 def analyze_single_email(
     email_id: int,
@@ -129,7 +122,6 @@ def analyze_single_email(
         "cached": False,
     }
 
-
 @router.post("/analyze-all")
 def analyze_all_emails(
     background_tasks: BackgroundTasks,
@@ -170,7 +162,6 @@ def analyze_all_emails(
         "pendentes": pending_count,
         "status_url": "/ai/analyze-all/status",
     }
-
 
 @router.get("/analyze-all/status")
 def analyze_all_status(

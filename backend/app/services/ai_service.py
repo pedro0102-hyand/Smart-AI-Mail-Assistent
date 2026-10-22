@@ -14,7 +14,6 @@ _MAX_RETRIES = 3
 _RETRY_EXCEPTIONS = (ResourceExhausted, ServiceUnavailable, DeadlineExceeded)
 _INITIAL_WAIT = 2  # segundos
 
-
 def _call_gemini(prompt: str) -> str:
     """
     Chama a Gemini API com retry automático e backoff exponencial.
@@ -46,7 +45,6 @@ def _call_gemini(prompt: str) -> str:
         _MAX_RETRIES, str(last_exception),
     )
     raise last_exception
-
 
 def analyze_email(subject: str, body: str) -> dict:
     """
@@ -88,8 +86,6 @@ E-MAIL:
             "suggested_reply": "",
         }
 
-# Mantém as funções individuais como wrappers para não quebrar
-# chamadas existentes em outros pontos do código
 def summarize_email(body: str) -> str:
     result = analyze_email("", body)
     return result["summary"]
