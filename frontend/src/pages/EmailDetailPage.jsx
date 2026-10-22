@@ -327,7 +327,7 @@ export default function EmailDetailPage() {
                 {email.body ? (
                   isHtml(email.body) ? (
                     <div
-                      style={{ fontSize: "14px", color: c.text, lineHeight: "1.8", wordBreak: "break-word", maxWidth: "100%", overflow: "hidden" }}
+                      style={{ fontSize: "14px", color: c.text, lineHeight: "1.8", wordBreak: "break-word", maxWidth: "100%", overflowX: "auto" }}
                       dangerouslySetInnerHTML={{ __html: email.body }}
                     />
                   ) : (

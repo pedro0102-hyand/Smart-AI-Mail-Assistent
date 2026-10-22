@@ -36,9 +36,9 @@ function useIsMobile() {
 }
 
 function useIsTablet() {
-  const [isTablet, setIsTablet] = useState(window.innerWidth <= 900);
+  const [isTablet, setIsTablet] = useState(window.innerWidth <= 1100);
   useEffect(() => {
-    const handler = () => setIsTablet(window.innerWidth <= 900);
+    const handler = () => setIsTablet(window.innerWidth <= 1100);
     window.addEventListener("resize", handler);
     return () => window.removeEventListener("resize", handler);
   }, []);
