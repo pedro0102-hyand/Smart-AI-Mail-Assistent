@@ -2,7 +2,6 @@ from __future__ import annotations
 import re
 import logging
 from typing import Dict, Any
-from transformers import pipeline as hf_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +17,9 @@ def _load_pipeline():
     if _pipeline is not None:
         return _pipeline  
 
+    from transformers import pipeline as hf_pipeline
+
+    # carrega o modelo apenas na primeira execucao
     logger.info("Carregando modelo mDeBERTa-v3 para classificação Zero-Shot NLI...")
     logger.info("(Primeira execução: pode levar alguns segundos para baixar ~800 MB)")
     _pipeline = hf_pipeline(task="zero-shot-classification",model=MODEL_NAME,device="cpu",batch_size=1)
