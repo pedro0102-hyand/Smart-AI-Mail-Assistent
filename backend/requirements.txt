@@ -27,7 +27,13 @@ google-generativeai
 # Tratamento de erros da API Google
 google-api-core
 
-# Machine Learning & PLN
+# Machine Learning & PLN — Naive Bayes
 scikit-learn==1.9.1
 pandas==3.0.6
 joblib==1.6.0
+
+# PLN — Zero-Shot NLI (mDeBERTa)
+transformers==4.57.6
+torch==2.14.1
+sentencepiece==0.2.2
+protobuf==5.29.6
