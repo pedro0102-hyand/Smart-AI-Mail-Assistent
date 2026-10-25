@@ -24,3 +24,4 @@ class Email(Base):
     # Relacionamentos
     user = relationship("User", back_populates="emails")
     analysis = relationship("EmailAnalysis", back_populates="email", uselist=False)
+    productivity = relationship("EmailProductivity", back_populates="email", uselist=False)

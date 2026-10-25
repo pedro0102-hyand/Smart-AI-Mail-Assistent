@@ -104,12 +104,7 @@ if __name__ == "__main__":
             "body": "Prezado cliente, segue em anexo a nota fiscal eletrônica e o boleto de cobrança referente aos serviços prestados no mês de outubro.",
         },
         {
-            "title": "E-mail 4: Spam / Phishing (PT-BR)",
-            "subject": "URGENTE: Sua conta foi bloqueada, clique para regularizar",
-            "body": "Identificamos uma atividade suspeita em sua conta. Acesse o link abaixo e insira seus dados para evitar o cancelamento definitivo.",
-        },
-        {
-            "title": "E-mail 5: Suporte técnico (PT-BR)",
+            "title": "E-mail 4: Suporte técnico (PT-BR)",
             "subject": "Chamado #4892 encerrado — problema de acesso ao sistema resolvido",
             "body": "Prezado Pedro, informamos que o chamado aberto para resolução do problema de autenticação no sistema ERP foi encerrado com sucesso pela nossa equipe.",
         },

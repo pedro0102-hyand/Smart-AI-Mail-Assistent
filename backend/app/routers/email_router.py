@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from app.core.database import get_db
@@ -8,11 +8,13 @@ from app.models.email_model import Email
 from app.models.email_analysis_model import EmailAnalysis
 from app.services.gmail_service import fetch_emails, send_email
 from app.ml.spam_service import predict_spam
+from app.routers.productivity_router import schedule_productivity_classification
 
 router = APIRouter(prefix="/emails", tags=["Emails"])
 
 @router.post("/sync")
 def sync_emails(
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
@@ -49,7 +51,17 @@ def sync_emails(
                 spam_count += 1
 
     db.commit()
-    return {"message": "Sincronização concluída.", "novos_emails": new_count, "spams_detectados": spam_count}
+    productivity_job = schedule_productivity_classification(
+        user_id,
+        db,
+        background_tasks,
+    )
+    return {
+        "message": "Sincronização concluída.",
+        "novos_emails": new_count,
+        "spams_detectados": spam_count,
+        "classificacao_produtividade": productivity_job,
+    }
 
 @router.get("/stats")
 def get_stats(
@@ -97,6 +109,7 @@ def list_emails(
     query = (
         db.query(Email)
         .options(joinedload(Email.analysis))
+        .options(joinedload(Email.productivity))
         .filter(Email.user_id == user_id)
     )
     if is_spam is not None:
@@ -121,6 +134,11 @@ def list_emails(
             "is_read": e.is_read,
             "is_spam": e.is_spam,
             "spam_score": e.spam_score,
+            "productivity": {
+                "is_productive": e.productivity.is_productive,
+                "productive_score": e.productivity.productive_score,
+                "label": e.productivity.label,
+            } if e.productivity and not e.is_spam else None,
             "analysis": {
                 "summary": e.analysis.summary,
                 "category": e.analysis.category,
@@ -140,6 +158,7 @@ def get_email(
     email = (
         db.query(Email)
         .options(joinedload(Email.analysis))
+        .options(joinedload(Email.productivity))
         .filter(Email.id == email_id, Email.user_id == user_id)
         .first()
     )
@@ -158,6 +177,11 @@ def get_email(
         "is_read": email.is_read,
         "is_spam": email.is_spam,
         "spam_score": email.spam_score,
+        "productivity": {
+            "is_productive": email.productivity.is_productive,
+            "productive_score": email.productivity.productive_score,
+            "label": email.productivity.label,
+        } if email.productivity and not email.is_spam else None,
         "analysis": {
             "summary": email.analysis.summary,
             "category": email.analysis.category,

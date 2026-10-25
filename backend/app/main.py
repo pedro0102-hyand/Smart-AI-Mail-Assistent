@@ -7,7 +7,8 @@ from app.core.security import SECRET_KEY
 from app.models import user_model            
 from app.models import email_model           
 from app.models import email_analysis_model  
-from app.routers import auth_router, email_router, ai_router
+from app.models import email_productivity_model
+from app.routers import auth_router, email_router, ai_router, productivity_router
 
 app = FastAPI(title="Email Assistant API")
 
@@ -18,6 +19,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(auth_router.router)
 app.include_router(email_router.router)
 app.include_router(ai_router.router)
+app.include_router(productivity_router.router)
 
 app.add_middleware(
     CORSMiddleware,
