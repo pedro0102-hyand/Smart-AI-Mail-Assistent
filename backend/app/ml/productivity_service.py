@@ -74,14 +74,9 @@ def predict_productivity(subject: str, body: str) -> Dict[str, Any]:
             "label": "produtivo" if is_productive else "improdutivo",
         }
 
-    except Exception as e:
-        logger.error("Erro na inferência NLI (mDeBERTa): %s", str(e))
-        # Em caso de falha, retorna valor neutro sem derrubar o sistema
-        return {
-            "is_productive": True,
-            "productive_score": 0.5,
-            "label": "produtivo",
-        }
+    except Exception:
+        logger.exception("Erro na inferência NLI (mDeBERTa).")
+        raise
     
 if __name__ == "__main__":
     print("=" * 65)
@@ -128,4 +123,3 @@ if __name__ == "__main__":
         print()
 
     print("=" * 65)
-
