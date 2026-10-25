@@ -242,6 +242,7 @@ export default function InboxPage() {
                 filteredEmails.map((email) => {
                   const category = email.analysis?.category;
                   const urgency = email.analysis?.urgency;
+                  const productivity = email.is_spam ? null : email.productivity;
                   const sender = email.sender?.split("<")[0].trim() || "Desconhecido";
                   const initial = sender.charAt(0).toLocaleUpperCase("pt-BR");
                   const avatarHue = (sender.charCodeAt(0) || 0) * 15;
@@ -265,6 +266,15 @@ export default function InboxPage() {
                           <span className="inbox-email-badges">
                             {urgency && <span className={`inbox-urgency-dot ${URGENCY_CLASS[urgency] || ""}`} title={`Urgência ${urgency}`} />}
                             {category && <span className={`inbox-category category-${category}`}>{category}</span>}
+                            {productivity && (
+                              <span
+                                className={`inbox-productivity-badge ${productivity.is_productive ? "is-productive" : "is-unproductive"}`}
+                                title={`Classificação de produtividade: ${productivity.label}; score ${Math.round(productivity.productive_score * 100)}%`}
+                              >
+                                {productivity.is_productive ? "Produtivo" : "Não produtivo"}
+                                {Number.isFinite(productivity.productive_score) && ` · ${Math.round(productivity.productive_score * 100)}%`}
+                              </span>
+                            )}
                             {email.is_spam && (
                               <span className="inbox-spam-badge">
                                 <MailIcon name="spam" />

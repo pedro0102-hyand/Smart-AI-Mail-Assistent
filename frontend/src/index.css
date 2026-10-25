@@ -1271,7 +1271,8 @@ body {
 }
 
 .inbox-category,
-.inbox-spam-badge {
+.inbox-spam-badge,
+.inbox-productivity-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1358,6 +1359,30 @@ body {
   border-color: #6a3441;
   background: #42232e;
   color: #ffa6b1;
+}
+
+.inbox-productivity-badge.is-productive {
+  border: 1px solid #b7e8d2;
+  background: #eaf8f1;
+  color: #207853;
+}
+
+.theme-dark .inbox-productivity-badge.is-productive {
+  border-color: #285c48;
+  background: #1d3d32;
+  color: #8ce0b8;
+}
+
+.inbox-productivity-badge.is-unproductive {
+  border: 1px solid #f2dfaa;
+  background: #fff8e7;
+  color: #946b18;
+}
+
+.theme-dark .inbox-productivity-badge.is-unproductive {
+  border-color: #65502b;
+  background: #3a3020;
+  color: #f4d27a;
 }
 
 .inbox-urgency-dot {
@@ -1648,7 +1673,8 @@ body {
     display: none;
   }
 
-  .inbox-spam-badge {
+  .inbox-spam-badge,
+  .inbox-productivity-badge {
     padding: 4px 5px;
     font-size: 8px;
   }

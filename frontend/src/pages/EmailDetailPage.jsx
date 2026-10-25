@@ -89,6 +89,7 @@ export default function EmailDetailPage() {
   const c = dark ? darkColors : lightColors;
   const CATS = dark ? CATEGORY_COLORS_DARK : CATEGORY_COLORS;
   const padding = isMobile ? "16px" : "32px 40px";
+  const productivity = email?.is_spam ? null : email?.productivity;
 
   useEffect(() => { loadEmail(); }, [id]);
 
@@ -250,9 +251,9 @@ export default function EmailDetailPage() {
                 </div>
 
                 {/* Badges */}
-                {email.analysis && (
+                {(email.analysis || productivity) && (
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    {email.analysis.category && (() => {
+                    {email.analysis?.category && (() => {
                       const cat = email.analysis.category;
                       const cs = CATS[cat] || CATS.outro;
                       return (
@@ -261,7 +262,7 @@ export default function EmailDetailPage() {
                         </span>
                       );
                     })()}
-                    {email.analysis.urgency && (() => {
+                    {email.analysis?.urgency && (() => {
                       const uc = URGENCY_CONFIG[email.analysis.urgency];
                       if (!uc) return null;
                       return (
@@ -271,6 +272,32 @@ export default function EmailDetailPage() {
                         </span>
                       );
                     })()}
+                    {productivity && (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "12px",
+                          fontWeight: "600",
+                          padding: "4px 10px",
+                          borderRadius: "8px",
+                          background: productivity.is_productive
+                            ? (dark ? "#12382E" : "#ECFDF5")
+                            : (dark ? "#3A3020" : "#FFFBEB"),
+                          color: productivity.is_productive
+                            ? (dark ? "#6EE7B7" : "#047857")
+                            : (dark ? "#FCD34D" : "#B45309"),
+                          border: `1px solid ${productivity.is_productive
+                            ? (dark ? "#1F5B48" : "#A7F3D0")
+                            : (dark ? "#65502B" : "#FDE68A")}`,
+                        }}
+                        title={`Score de produtividade: ${Math.round(productivity.productive_score * 100)}%`}
+                      >
+                        {productivity.is_productive ? "Produtivo" : "Não produtivo"}
+                        {Number.isFinite(productivity.productive_score) && ` · score ${Math.round(productivity.productive_score * 100)}%`}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
