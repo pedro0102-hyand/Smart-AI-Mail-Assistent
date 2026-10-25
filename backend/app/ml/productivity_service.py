@@ -28,7 +28,7 @@ def _load_pipeline():
 
 def _prepare_text(subject: str, body: str, max_chars: int = 1000) -> str:
 
-    subject = subject or ""
+    subject = re.sub(r"\s+", " ", subject or "").strip()
     body = body or ""
 
     # Remove tags HTML
@@ -40,8 +40,11 @@ def _prepare_text(subject: str, body: str, max_chars: int = 1000) -> str:
     # Remove espaços múltiplos e quebras de linha excessivas
     body = re.sub(r"\s+", " ", body).strip()
 
-    # Combina: assunto com peso duplo (repetido) + início do corpo
-    combined = f"{subject}. {subject}. {body}".strip()
+    # Combina o assunto com peso duplo e adiciona apenas conteúdo presente.
+    parts = [subject, subject] if subject else []
+    if body:
+        parts.append(body)
+    combined = ". ".join(parts)
 
     # Trunca para evitar ultrapassar os 512 tokens do mDeBERTa
     if len(combined) > max_chars:
