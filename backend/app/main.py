@@ -1,3 +1,9 @@
+import warnings
+
+# Suprime alertas benignos de depreciação do PyTorch no terminal
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*torch\\.jit\\.script.*")
+warnings.filterwarnings("ignore", category=FutureWarning, module=".*torch.*")
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

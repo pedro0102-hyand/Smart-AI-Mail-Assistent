@@ -4,8 +4,9 @@ import logging
 import warnings
 from typing import Dict, Any
 
-# Suprime alerta benigno do PyTorch sobre torch.jit.script
-warnings.filterwarnings("ignore", category=FutureWarning, module="torch.jit._script")
+# Suprime alertas benignos de depreciação do PyTorch (ex: torch.jit.script)
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*torch\\.jit\\.script.*")
+warnings.filterwarnings("ignore", category=FutureWarning, module=".*torch.*")
 logger = logging.getLogger(__name__)
 
 MODEL_NAME = "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
