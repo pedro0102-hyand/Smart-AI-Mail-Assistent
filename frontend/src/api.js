@@ -17,8 +17,10 @@ async function request(path, options = {}) {
 
   if (res.status === 401) {
     localStorage.removeItem("token");
-    window.location.href = "/";
-    return;
+    if (!window.location.pathname.startsWith("/auth") && window.location.pathname !== "/") {
+      window.location.href = "/?expired=1";
+    }
+    throw new Error("Sua sessão expirou. Redirecionando para login...");
   }
 
   if (!res.ok) {

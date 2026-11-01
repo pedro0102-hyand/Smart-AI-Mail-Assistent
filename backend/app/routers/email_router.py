@@ -25,7 +25,9 @@ def sync_emails(
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
     try:
-        gmail_emails = fetch_emails(user.access_token, user.refresh_token)
+        gmail_emails = fetch_emails(user.access_token, user.refresh_token, user_id=user.id)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao buscar e-mails: {str(e)}")
 
@@ -236,7 +238,10 @@ def reply_email(
             subject=f"Re: {email.subject}",
             body=message_text,
             thread_id=email.thread_id,
+            user_id=user.id,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao enviar e-mail: {str(e)}")
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 
 function GoogleIcon() {
   return (
@@ -12,6 +13,9 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const [searchParams] = useSearchParams();
+  const isExpired = searchParams.get("expired") === "1";
+
   const handleGoogleLogin = () => {
     window.location.href = "http://localhost:8000/auth/google";
   };
@@ -109,6 +113,26 @@ export default function LoginPage() {
               <h2>Seu e-mail, de um jeito mais inteligente.</h2>
               <p>Entre com sua conta Google para continuar.</p>
             </div>
+
+            {isExpired && (
+              <div style={{
+                background: "#FEF2F2",
+                border: "1px solid #FECACA",
+                color: "#991B1B",
+                padding: "10px 14px",
+                borderRadius: "10px",
+                fontSize: "13px",
+                fontWeight: "500",
+                marginBottom: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                lineHeight: "1.4",
+              }}>
+                <span>⚠️</span>
+                <span>Sua sessão expirou. Conecte-se novamente com o Google para continuar.</span>
+              </div>
+            )}
 
             <button className="login-google-button" type="button" onClick={handleGoogleLogin}>
               <GoogleIcon />
