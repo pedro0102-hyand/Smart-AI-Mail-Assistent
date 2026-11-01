@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 MODEL_NAME = "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
 CANDIDATE_LABELS = ["produtivo", "improdutivo"]
 HYPOTHESIS_TEMPLATE = "Este é um e-mail de comunicação {}."
-PRODUCTIVE_THRESHOLD = 0.50
+PRODUCTIVE_THRESHOLD = 0.65  
 _pipeline = None
 
 def _load_pipeline():
@@ -28,6 +28,7 @@ def _load_pipeline():
 
 def _prepare_text(subject: str, body: str, max_chars: int = 1000) -> str:
 
+    # Normaliza espaços e quebras de linha no assunto
     subject = re.sub(r"\s+", " ", subject or "").strip()
     body = body or ""
 

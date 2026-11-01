@@ -142,9 +142,9 @@ export default function DashboardPage() {
   const kpis = [
     { label: "Total de e-mails",   value: stats?.total_emails ?? "—", icon: "📧", bg: dark ? "#1E1E2E" : "#EEF2FF" },
     { label: "Não lidos",           value: stats?.unread ?? "—",       icon: "🔴", bg: dark ? "#2A1515" : "#FEF2F2" },
-    { label: "Spams Filtrados",     value: stats?.spam ?? "—",          icon: "🚨", bg: dark ? "#4C1919" : "#FEF2F2" },
-    { label: "Analisados pela IA",  value: analyzed,                   icon: "✦",  bg: dark ? "#0D2A1E" : "#ECFDF5" },
-    { label: "Cobertura IA",        value: `${coveragePercent}%`,      icon: "📊", bg: dark ? "#2A1F0D" : "#FFFBEB" },
+    { label: "Spams Filtrados",     value: stats?.spam ?? "—",         icon: "🚨", bg: dark ? "#4C1919" : "#FEF2F2" },
+    { label: "Produtivos",          value: stats?.productive ?? "—",   icon: "⚡", bg: dark ? "#0D2A1E" : "#ECFDF5" },
+    { label: "Improdutivos",        value: stats?.unproductive ?? "—", icon: "💤", bg: dark ? "#2A1F0D" : "#FFFBEB" },
   ];
 
   const padding = isMobile ? "16px" : "36px 40px";
@@ -289,6 +289,54 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
+
+              {/* Produtividade mDeBERTa */}
+              {((stats?.productive ?? 0) + (stats?.unproductive ?? 0)) > 0 && (() => {
+                const totalProd = (stats.productive ?? 0) + (stats.unproductive ?? 0);
+                const pctProd = Math.round((stats.productive / totalProd) * 100);
+                const pctImprod = 100 - pctProd;
+                const prodData = [
+                  { label: "Produtivos", value: stats.productive, pct: pctProd, color: "#10B981" },
+                  { label: "Improdutivos", value: stats.unproductive, pct: pctImprod, color: "#F59E0B" },
+                ];
+                return (
+                  <div style={{ background: c.card, borderRadius: "16px", padding: isMobile ? "18px" : "24px", boxShadow: c.shadow, border: `1px solid ${c.borderCard}`, marginBottom: "16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", flexWrap: "wrap", gap: "8px" }}>
+                      <div>
+                        <div style={{ fontSize: "15px", fontWeight: "700", color: c.title }}>Produtividade dos E-mails</div>
+                        <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "3px" }}>
+                          Classificado pelo mDeBERTa · {totalProd} e-mails avaliados
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "6px",
+                        background: dark ? "#0D2A1E" : "#ECFDF5", color: dark ? "#6EE7B7" : "#047857",
+                        border: `1px solid ${dark ? "#1F5B48" : "#A7F3D0"}`,
+                      }}>
+                        Zero-Shot NLI
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                      {prodData.map((item) => (
+                        <div key={item.label}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                            <span style={{ fontSize: "13px", color: c.text, fontWeight: "500", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: item.color, display: "inline-block", flexShrink: 0 }} />
+                              {item.label}
+                            </span>
+                            <span style={{ fontSize: "13px", fontWeight: "700", color: c.title }}>
+                              {item.value} <span style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: "400" }}>({item.pct}%)</span>
+                            </span>
+                          </div>
+                          <div style={{ height: "8px", background: dark ? "#2A2A3A" : "#F3F4F6", borderRadius: "4px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${item.pct}%`, background: item.color, borderRadius: "4px", transition: "width 0.6s ease" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Coverage */}
               {stats?.total_emails > 0 && (

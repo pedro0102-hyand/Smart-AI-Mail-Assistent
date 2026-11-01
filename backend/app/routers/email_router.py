@@ -6,6 +6,7 @@ from app.core.security import get_current_user_id
 from app.models.user_model import User
 from app.models.email_model import Email
 from app.models.email_analysis_model import EmailAnalysis
+from app.models.email_productivity_model import EmailProductivity
 from app.services.gmail_service import fetch_emails, send_email
 from app.ml.spam_service import predict_spam
 from app.routers.productivity_router import schedule_productivity_classification
@@ -89,10 +90,26 @@ def get_stats(
     unread = db.query(func.count(Email.id)).filter(Email.user_id == user_id, Email.is_read == False).scalar()
     spam = db.query(func.count(Email.id)).filter(Email.user_id == user_id, Email.is_spam == True).scalar()
 
+    # Contagem de produtividade (apenas e-mails não-spam já classificados)
+    productive = (
+        db.query(func.count(EmailProductivity.id))
+        .join(Email, Email.id == EmailProductivity.email_id)
+        .filter(Email.user_id == user_id, EmailProductivity.is_productive == True)
+        .scalar()
+    )
+    unproductive = (
+        db.query(func.count(EmailProductivity.id))
+        .join(Email, Email.id == EmailProductivity.email_id)
+        .filter(Email.user_id == user_id, EmailProductivity.is_productive == False)
+        .scalar()
+    )
+
     return {
         "total_emails": total,
         "unread": unread,
         "spam": spam,
+        "productive": productive,
+        "unproductive": unproductive,
         "by_category": {row.category: row.total for row in by_category},
         "by_urgency": {row.urgency: row.total for row in by_urgency},
     }
