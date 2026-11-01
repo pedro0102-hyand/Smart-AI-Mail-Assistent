@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -9,8 +10,15 @@ from app.models import email_model
 from app.models import email_analysis_model  
 from app.models import email_productivity_model
 from app.routers import auth_router, email_router, ai_router, productivity_router
+from app.ml.productivity_service import warmup_productivity_model
 
-app = FastAPI(title="Email Assistant API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pré-aquecimento do modelo mDeBERTa no startup para eliminar cold start
+    warmup_productivity_model()
+    yield
+
+app = FastAPI(title="Email Assistant API", lifespan=lifespan)
 
 # Criar tabelas automaticamente ao iniciar (sem Alembic por ora)
 Base.metadata.create_all(bind=engine)

@@ -1,8 +1,11 @@
 from __future__ import annotations
 import re
 import logging
+import warnings
 from typing import Dict, Any
 
+# Suprime alerta benigno do PyTorch sobre torch.jit.script
+warnings.filterwarnings("ignore", category=FutureWarning, module="torch.jit._script")
 logger = logging.getLogger(__name__)
 
 MODEL_NAME = "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
@@ -81,6 +84,16 @@ def predict_productivity(subject: str, body: str) -> Dict[str, Any]:
     except Exception:
         logger.exception("Erro na inferência NLI (mDeBERTa).")
         raise
+
+
+def warmup_productivity_model() -> None:
+    """Pré-aquece o mDeBERTa durante o startup da aplicação para eliminar cold start."""
+    try:
+        logger.info("⚡ Pré-aquecendo modelo mDeBERTa...")
+        predict_productivity("Aquecimento", "Inicialização do modelo de produtividade.")
+        logger.info("✅ mDeBERTa pré-aquecido e pronto para requisições.")
+    except Exception as e:
+        logger.warning(f"⚠️ Falha no pré-aquecimento do mDeBERTa: {e}")
     
 if __name__ == "__main__":
     print("=" * 65)
