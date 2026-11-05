@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db, SessionLocal
 from app.core.security import get_current_user_id
 from app.models.email_model import Email
@@ -21,6 +21,7 @@ def _run_analyze_all(user_id: int) -> None:
         analyzed_ids = db.query(EmailAnalysis.email_id).subquery()
         emails = (
             db.query(Email)
+            .options(joinedload(Email.productivity))
             .filter(
                 Email.user_id == user_id,
                 Email.id.notin_(analyzed_ids),
@@ -38,7 +39,8 @@ def _run_analyze_all(user_id: int) -> None:
 
         for email in emails:
             try:
-                result = analyze_email(email.subject or "", email.body)
+                is_prod = email.productivity.is_productive if email.productivity else None
+                result = analyze_email(subject=email.subject or "", body=email.body, is_spam=email.is_spam,is_productive=is_prod)
 
                 analysis = EmailAnalysis(
                     email_id=email.id,
@@ -47,6 +49,7 @@ def _run_analyze_all(user_id: int) -> None:
                     urgency=result["urgency"],
                     suggested_reply=result["suggested_reply"],
                 )
+
                 db.add(analysis)
                 db.commit()
                 _jobs[user_id]["done"] += 1
@@ -81,7 +84,12 @@ def analyze_single_email(
     Analisa um e-mail específico com IA:
     gera resumo, classifica e sugere resposta.
     """
-    email = db.query(Email).filter(Email.id == email_id, Email.user_id == user_id).first()
+    email = (
+        db.query(Email)
+        .options(joinedload(Email.productivity))
+        .filter(Email.id == email_id, Email.user_id == user_id)
+        .first()
+    )
     if not email:
         raise HTTPException(status_code=404, detail="E-mail não encontrado.")
     if not email.body:
@@ -99,8 +107,9 @@ def analyze_single_email(
             "cached": True,
         }
 
-    # Análise em chamada única à Gemini
-    result = analyze_email(email.subject or "", email.body)
+    # Análise em chamada única à Gemini integrando sinais das outras camadas
+    is_prod = email.productivity.is_productive if email.productivity else None
+    result = analyze_email(subject=email.subject or "", body=email.body, is_spam=email.is_spam, is_productive=is_prod)
 
     analysis = EmailAnalysis(
         email_id=email_id,
@@ -109,6 +118,7 @@ def analyze_single_email(
         urgency=result["urgency"],
         suggested_reply=result["suggested_reply"],
     )
+
     db.add(analysis)
     db.commit()
     db.refresh(analysis)
