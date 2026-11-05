@@ -4,6 +4,8 @@ import Sidebar, { MobileHeader } from "../components/Sidebar";
 import { api } from "../api";
 import { useTheme } from "../App";
 
+const PAGE_SIZE = 20;
+
 const URGENCY_CLASS = {
   alta: "urgency-high",
   média: "urgency-medium",
@@ -40,6 +42,7 @@ function MailIcon({ name }) {
     search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
     refresh: <><path d="M20 7v5h-5" /><path d="M4 17v-5h5" /><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2" /></>,
     sparkle: <><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z" /><path d="m19 14 1.1 2.4L22 17l-1.9.7L19 20l-.9-2.3L16 17l2.1-.6L19 14Z" /></>,
+    bolt: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></>,
   };
 
   return (
@@ -54,20 +57,31 @@ export default function InboxPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Estados de dados e paginação
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Estados de ações
   const [syncing, setSyncing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [message, setMessage] = useState(null);
   const [spamFilter, setSpamFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Estados de jobs em background
+  const [productivityJob, setProductivityJob] = useState(null);
+  const [aiJob, setAiJob] = useState(null);
+
   const loadEmails = useCallback(async () => {
     try {
       setLoading(true);
       const isSpamParam = spamFilter === "all" ? null : spamFilter === "spam";
-      const data = await api.getEmails(0, 50, isSpamParam);
+      const data = await api.getEmails(0, PAGE_SIZE, isSpamParam);
       setEmails(data);
+      setHasMore(data.length >= PAGE_SIZE);
     } catch (e) {
       setMessage({ type: "error", text: e.message });
     } finally {
@@ -75,19 +89,100 @@ export default function InboxPage() {
     }
   }, [spamFilter]);
 
-  useEffect(() => { loadEmails(); }, [loadEmails]);
+  useEffect(() => {
+    loadEmails();
+  }, [loadEmails]);
+
+  // Carregar mais mensagens (paginação)
+  async function handleLoadMore() {
+    if (loadingMore || !hasMore) return;
+    try {
+      setLoadingMore(true);
+      const isSpamParam = spamFilter === "all" ? null : spamFilter === "spam";
+      const nextBatch = await api.getEmails(emails.length, PAGE_SIZE, isSpamParam);
+      if (nextBatch.length > 0) {
+        setEmails((prev) => [...prev, ...nextBatch]);
+      }
+      setHasMore(nextBatch.length >= PAGE_SIZE);
+    } catch (e) {
+      setMessage({ type: "error", text: e.message });
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  // Verifica ao montar se há jobs em andamento
+  useEffect(() => {
+    api.getProductivityStatus()
+      .then((job) => {
+        if (job && job.status === "running") setProductivityJob(job);
+      })
+      .catch(() => {});
+
+    api.getAnalyzeStatus()
+      .then((job) => {
+        if (job && job.status === "running") setAiJob(job);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Polling em tempo real enquanto jobs estiverem executando
+  useEffect(() => {
+    const isProdRunning = productivityJob?.status === "running";
+    const isAiRunning = aiJob?.status === "running";
+
+    if (!isProdRunning && !isAiRunning) return;
+
+    const interval = setInterval(async () => {
+      if (isProdRunning) {
+        try {
+          const res = await api.getProductivityStatus();
+          setProductivityJob(res);
+          if (res.status === "completed" || res.status === "failed") {
+            loadEmails();
+            setTimeout(() => setProductivityJob(null), 4000);
+          }
+        } catch {
+          // ignora falhas transitórias de conexão no polling
+        }
+      }
+
+      if (isAiRunning) {
+        try {
+          const res = await api.getAnalyzeStatus();
+          setAiJob(res);
+          if (res.status === "completed" || res.status === "failed") {
+            loadEmails();
+            setTimeout(() => setAiJob(null), 4000);
+          }
+        } catch {
+          // ignora falhas transitórias de conexão no polling
+        }
+      }
+    }, 1800);
+
+    return () => clearInterval(interval);
+  }, [productivityJob?.status, aiJob?.status, loadEmails]);
 
   async function handleSync() {
     try {
       setSyncing(true);
       const result = await api.syncEmails();
-      setMessage({ type: "success", text: `${result.novos_emails} novos e-mails sincronizados.` });
+      setMessage({
+        type: "success",
+        text: `${result.novos_emails} novos e-mails sincronizados (${result.spams_detectados} spams detectados).`,
+      });
+
+      if (result.classificacao_produtividade && result.classificacao_produtividade.status === "running") {
+        setProductivityJob(result.classificacao_produtividade);
+      }
+
       await loadEmails();
     } catch (e) {
       setMessage({ type: "error", text: e.message });
     } finally {
       setSyncing(false);
-      setTimeout(() => setMessage(null), 3000);
+      setTimeout(() => setMessage(null), 4000);
     }
   }
 
@@ -95,13 +190,23 @@ export default function InboxPage() {
     try {
       setAnalyzing(true);
       const result = await api.analyzeAll();
-      setMessage({ type: "success", text: `${result.processados} e-mails analisados pela IA.` });
+      if (result.pendentes > 0) {
+        setAiJob({
+          status: "running",
+          total: result.pendentes,
+          done: 0,
+          progress_pct: 0,
+        });
+        setMessage({ type: "success", text: "Análise iniciada em segundo plano." });
+      } else {
+        setMessage({ type: "success", text: result.message || "Todos os e-mails já estão analisados." });
+      }
       await loadEmails();
     } catch (e) {
       setMessage({ type: "error", text: e.message });
     } finally {
       setAnalyzing(false);
-      setTimeout(() => setMessage(null), 3000);
+      setTimeout(() => setMessage(null), 4000);
     }
   }
 
@@ -154,6 +259,48 @@ export default function InboxPage() {
             </div>
           </header>
 
+          {/* Card de Progresso: Produtividade (mDeBERTa) */}
+          {productivityJob && productivityJob.status === "running" && (
+            <div className="inbox-progress-card" role="status">
+              <div className="inbox-progress-header">
+                <span className="inbox-progress-title">
+                  <MailIcon name="bolt" />
+                  <span>Classificando produtividade em segundo plano (mDeBERTa)...</span>
+                </span>
+                <span>
+                  {productivityJob.done || 0} de {productivityJob.total || 0} ({productivityJob.progress_pct || 0}%)
+                </span>
+              </div>
+              <div className="inbox-progress-track">
+                <div
+                  className="inbox-progress-fill"
+                  style={{ width: `${Math.min(100, productivityJob.progress_pct || 0)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Card de Progresso: Análise Geral (Gemini) */}
+          {aiJob && aiJob.status === "running" && (
+            <div className="inbox-progress-card" role="status">
+              <div className="inbox-progress-header">
+                <span className="inbox-progress-title">
+                  <MailIcon name="sparkle" />
+                  <span>Analisando e-mails com IA em segundo plano (Gemini)...</span>
+                </span>
+                <span>
+                  {aiJob.done || 0} de {aiJob.total || 0} ({aiJob.progress_pct || 0}%)
+                </span>
+              </div>
+              <div className="inbox-progress-track">
+                <div
+                  className="inbox-progress-fill"
+                  style={{ width: `${Math.min(100, aiJob.progress_pct || 0)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {message && (
             <div className={`inbox-notice ${message.type}`} role={message.type === "error" ? "alert" : "status"}>
               <span className="inbox-notice-mark">{message.type === "error" ? "!" : "✓"}</span>
@@ -166,7 +313,7 @@ export default function InboxPage() {
             <article className="inbox-stat-card">
               <span className="inbox-stat-icon stat-icon-indigo"><MailIcon name="all" /></span>
               <div><strong>{emails.length}</strong><span>E-mails carregados</span></div>
-              <span className="inbox-stat-note">últimos 50</span>
+              <span className="inbox-stat-note">página ativa</span>
             </article>
             <article className="inbox-stat-card">
               <span className="inbox-stat-icon stat-icon-blue"><MailIcon name="inbox" /></span>
@@ -291,8 +438,35 @@ export default function InboxPage() {
                 })
               )}
             </div>
-            {!loading && emails.length === 50 && (
-              <div className="inbox-list-footer">Exibindo os 50 e-mails mais recentes.</div>
+
+            {/* Paginação e Rodapé da Lista */}
+            {!loading && (
+              <div className="inbox-list-footer">
+                {hasMore ? (
+                  <button
+                    type="button"
+                    className="inbox-load-more-btn"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <MailIcon name="refresh" />
+                        <span>Carregando mais...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Carregar mais e-mails</span>
+                        <span style={{ opacity: 0.7, fontSize: "11px" }}>
+                          (exibindo {emails.length})
+                        </span>
+                      </>
+                    )}
+                  </button>
+                ) : emails.length > 0 ? (
+                  <span>Todos os {emails.length} e-mails carregados.</span>
+                ) : null}
+              </div>
             )}
           </section>
         </main>

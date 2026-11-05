@@ -42,6 +42,9 @@ export const api = {
   getStats: () => request("/emails/stats"),
   analyzeEmail: (id) => request(`/ai/analyze/${id}`, { method: "POST" }),
   analyzeAll: () => request("/ai/analyze-all", { method: "POST" }),
+  getAnalyzeStatus: () => request("/ai/analyze-all/status"),
+  classifyProductivityAll: () => request("/productivity/classify-all", { method: "POST" }),
+  getProductivityStatus: () => request("/productivity/classify-all/status"),
   replyEmail: (id, message) =>
     request(`/emails/${id}/reply`, {
       method: "POST",
